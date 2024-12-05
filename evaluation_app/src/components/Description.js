@@ -19,7 +19,7 @@ function DescriptionContent() {
         <textarea
           style={styles.textarea}
           placeholder="Enter your description here..."
-          rows="5"
+          rows="8"
         ></textarea>
       ) : (
         <div style={styles.fileUpload}>
@@ -46,9 +46,10 @@ const styles = {
     padding: "20px",
     borderRadius: "10px",
     boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-    width: "400px",
+    width: "50%",
     margin: "0 auto",
     textAlign: "center",
+    marginTop: "10vh",
   },
   heading: {
     color: "#333",
@@ -66,7 +67,6 @@ const styles = {
   },
   textarea: {
     width: "100%",
-    height: "100px",
     padding: "10px",
     border: "1px solid #ccc",
     borderRadius: "5px",

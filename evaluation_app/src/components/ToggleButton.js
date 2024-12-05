@@ -17,15 +17,14 @@ function ToggleButton({ onToggle }) {
           backgroundColor: isToggled ? "#4CAF50" : "#ccc",
         }}
         onClick={toggleHandler}
-      >
+      ><p style={{...styles.statusText}}>Text</p>
+      <p style={{...styles.statusText}}>File</p>
         <div
           style={{
             ...styles.toggleKnob,
             transform: isToggled ? "translateX(97%)" : "translateX(0)",
           }}
-        ><p style={styles.statusText}>
-        {isToggled ? "Enabled" : "Disabled"}
-      </p></div>
+        ></div>
       </div>
     </div>
   );
@@ -41,14 +40,18 @@ const styles = {
     width:"80%",
   },
   toggleSwitch: {
-    width: "90%",
+    width: "60%",
     height: "39px",
     borderRadius: "14px",
     position: "relative",
     cursor: "pointer",
     transition: "background-color 0.3s ease",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"space-around",
   },
   toggleKnob: {
+    
     width: "50%",
     height: "35px",
     backgroundColor: "#fff",
@@ -63,7 +66,10 @@ const styles = {
     justifyContent:"center",
   },
   statusText: {
-    margin:"0%"
+    marginTop:"10px",
+    zIndex:10,
+    fontSize:"100%",
+    fontWeight:"600",
   },
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import '../css/Title.css'; 
+import '../css/Title.css';
 import Description from './Description';
 
 const TitleAndText = () => {
@@ -7,7 +7,7 @@ const TitleAndText = () => {
   const [message, setMessage] = useState('');
   const [isAvailable, setIsAvailable] = useState(null);
   const [debouncedName, setDebouncedName] = useState(name);
-  const [showDescription, setShowDescription] = useState(false); 
+  const [showDescription, setShowDescription] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -58,37 +58,44 @@ const TitleAndText = () => {
     if (isAvailable) {
       // Handle the schedule navigation logic if required
     } else {
-      setShowDescription(true); 
+      setShowDescription(true);
     }
   };
 
   return (
-    <div className="name-check-container">
+    <>
       {!showDescription ? (
+        <div className="name-check-container" style={{marginTop:"20vh"}}>
         <div className="name-check-content">
-          <h2>Check Name Availability</h2>
+          <h2>Check Title Availability</h2>
           <input
             type="text"
-            placeholder="Enter the title"
+            placeholder="Enter a unique title for your project"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onBlur={handleBlur} 
+            onBlur={handleBlur}
+            className="name-input"
           />
           {message && (
-            <p className={`message ${isAvailable ? 'available' : 'required'}`}>
+            <p className={`message ${isAvailable ? 'available' : 'error'}`}>
               {message}
             </p>
           )}
-          {message && (
-            <button onClick={handleButtonClick}>
-              {isAvailable ? 'Go to Schedule' : 'Go to Description'}
+          {/* Button only renders if:
+              - The name is not empty
+              - There is a valid message */}
+          {name.trim() !== '' && message && (
+            <button onClick={handleButtonClick} className="action-button">
+              {isAvailable ? 'Try Again' : 'Continue to add Description'}
             </button>
           )}
         </div>
+        </div>
       ) : (
-        <Description/>
+        <Description />
       )}
-    </div>
+      </>
+
   );
 };
 
