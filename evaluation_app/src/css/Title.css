@@ -1,74 +1,103 @@
 /* General container styling */
 .name-check-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 50%;
-    margin: auto;
-    margin-top: 5%;
+display: flex;
+justify-content: center;
+align-items: center;
+padding: 20px;
+background-color: #fff;
+border-radius: 8px;
+border:0.1px solid rgba(0, 0, 0, 0.175);
+width: 50%;
+margin: auto;
+margin-top: 5%;
+}
+
+.name-check-content {
+max-width: 400px;
+width: 100%;
+text-align: center;
+}
+
+h2 {
+margin-bottom: 20px;
+font-size: 24px;
+color: #333;
+}
+
+/* Input field styling */
+.name-input {
+width: 100%;
+padding: 12px;
+margin: 10px 0;
+border: 1px solid #3d444d;
+border-radius: 10px;
+font-size: 16px;
+outline: none;
+}
+
+
+.name-input:focus {
+border-color: #1f6feb;
+border-width: 2px;
+}
+
+
+/* Message styling */
+.message {
+/* margin-top: 10px; */
+font-size: 15px;
+text-align: left;
+font-weight: 500;
+}
+
+.message.error {
+color: rgb(0, 13, 255);
+}
+
+.message.available {
+color: green;
+}
+
+/* Button styling */
+.action-button {
+/* margin-top: 20px; */
+margin-top: 10px;
+padding: 12px 20px;
+font-size: 16px;
+color: #fff;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+transition: background-color 0.3s ease;
+float: right;
+}
+
+.action-button.available:hover {
+background-color: #116329;
+}
+
+.action-button.error:hover {
+background-color: rgb(0, 11, 226);
+}
+
+.action-button.available 
+{
+background-color: green;
+}
+
+.action-button.error
+{
+background-color: rgb(52, 79, 254);
+}
+
+@media (max-width: 700px) 
+{
+  .name-check-container {
+    width:80%;
   }
-  
-  .name-check-content {
-    max-width: 400px;
-    width: 100%;
-    text-align: center;
-  }
-  
-  h2 {
-    margin-bottom: 20px;
-    font-size: 24px;
-    color: #333;
-  }
-  
-  /* Input field styling */
-  .name-input {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border: 2px solid #d3d3d3;
-    border-radius: 4px;
-    font-size: 16px;
-    outline: none;
-  }
-  
-  .name-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-  }
-  
-  /* Message styling */
-  .message {
-    /* margin-top: 10px; */
-    font-size: 14px;
-    text-align: left;
-  }
-  
-  .message.error {
-    color: red;
-  }
-  
-  .message.available {
-    color: green;
-  }
-  
-  /* Button styling */
-  .action-button {
-    /* margin-top: 20px; */
-    padding: 12px 20px;
-    font-size: 16px;
-    color: #fff;
-    background-color: #3b82f6;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    float: right;
-  }
-  
-  .action-button:hover {
-    background-color: #2563eb;
-  }
+}
+
+.message.alert1 
+{
+  color:red;
+}

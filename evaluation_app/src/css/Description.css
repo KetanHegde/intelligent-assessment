@@ -1,0 +1,79 @@
+.description-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    border:0.1px solid rgba(0, 0, 0, 0.175);
+    width: 50%;
+    margin: 7vh auto 0;
+    text-align: center;
+  }
+  
+  .description-content h2 {
+    color: #333;
+    margin-bottom: 15px;
+  }
+  
+  .radio-group {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+  }
+  
+  .radio-label {
+    margin-right: 10px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
+  .textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid grey;
+    border-radius: 5px;
+    resize: none;
+    outline: none;
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+  
+
+  textarea:focus
+  {
+    border:1.5px solid #007bff;
+  }
+
+  .file-upload {
+    margin-bottom: 15px;
+  }
+  
+  .submit-button {
+    background-color: #28a745;
+    color: #fff;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  /* Media query for smaller screens */
+  @media (max-width: 700px) {
+    .description-content {
+      width: 80%; /* Adjust the width for smaller screens */
+      padding: 15px; /* Reduce padding */
+    }
+  
+    .textarea {
+      font-size: 12px; /* Adjust font size for readability */
+    }
+  
+    .file-label {
+      font-size: 12px; /* Adjust font size for readability */
+      padding: 8px 12px; /* Reduce padding */
+    }
+  
+    .submit-button {
+      font-size: 14px; /* Adjust font size */
+      padding: 8px 12px; /* Reduce padding */
+    }
+  }

@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../css/Title.css';
 import Description from './Description';
 
 const TitleAndText = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [isAvailable, setIsAvailable] = useState(null);
   const [debouncedName, setDebouncedName] = useState(name);
   const [showDescription, setShowDescription] = useState(false);
+  const [errorMessageStatus, setErrorMsgStatus] = useState(false);
+
+
+  const handleDescriptionSaved = () => {
+    setShowDescription(false);
+    setName("");
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedName(name);
     }, 500);
-
     return () => {
       clearTimeout(handler);
     };
@@ -24,6 +32,7 @@ const TitleAndText = () => {
       checkNameAvailability(debouncedName);
     } else {
       setMessage('');
+      setErrorMsgStatus(false);
       setIsAvailable(null);
     }
   }, [debouncedName]);
@@ -40,9 +49,11 @@ const TitleAndText = () => {
       const result = await response.json();
       setIsAvailable(result.available);
       setMessage(result.message);
+      setErrorMsgStatus(false);
     } catch (error) {
       console.error('Error checking name:', error);
       setMessage('An error occurred. Please try again.');
+      setErrorMsgStatus(true);
       setIsAvailable(null);
     }
   };
@@ -50,15 +61,18 @@ const TitleAndText = () => {
   const handleBlur = () => {
     if (name.trim() === '') {
       setMessage('This field is required.');
+      setErrorMsgStatus(true);
       setIsAvailable(null);
     }
   };
 
   const handleButtonClick = () => {
     if (isAvailable) {
-      // Handle the schedule navigation logic if required
-    } else {
       setShowDescription(true);
+    }
+    else 
+    {
+      navigate('/schedule-test-2');
     }
   };
 
@@ -70,29 +84,26 @@ const TitleAndText = () => {
           <h2>Check Title Availability</h2>
           <input
             type="text"
-            placeholder="Enter a unique title for your project"
+            placeholder="Enter a topic for your test"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={handleBlur}
             className="name-input"
           />
           {message && (
-            <p className={`message ${isAvailable ? 'available' : 'error'}`}>
+            <p className={`message ${isAvailable ? 'available' : 'error'} ${errorMessageStatus ? 'alert1' : ''}`}>
               {message}
             </p>
           )}
-          {/* Button only renders if:
-              - The name is not empty
-              - There is a valid message */}
           {name.trim() !== '' && message && (
-            <button onClick={handleButtonClick} className="action-button">
-              {isAvailable ? 'Try Again' : 'Continue to add Description'}
+            <button onClick={handleButtonClick} className={`action-button ${isAvailable ? 'available' : 'error'}`}>
+              {isAvailable ?'Continue to add Description': 'Schedule Test Now'}
             </button>
           )}
         </div>
         </div>
       ) : (
-        <Description />
+        <Description title={name}  setShowDesc={handleDescriptionSaved}/>
       )}
       </>
 

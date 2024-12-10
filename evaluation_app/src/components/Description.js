@@ -1,103 +1,118 @@
 import React, { useState } from "react";
+import "../css/Description.css";
 import ToggleButton from "./ToggleButton";
-function DescriptionContent() {
-    const [toggleState, setToggleState] = useState(false);
 
-    const handleToggle = (state) => {
-      setToggleState(state);
-      console.log("Toggle State:", state); 
-    };
+function Description({ title, setShowDesc }) {
+  const [toggleState, setToggleState] = useState(false);
+  const [description, setDescription] = useState("");
+  const [file, setFile] = useState(null);
+  const [statusColor, setMessageColor] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isShowBtn, setShowBtn] = useState(true);
+
+  
+  const handleToggle = (state) => {
+    setToggleState(state);
+    setMessage("");
+  };
+
+  const handleFileChange = (event) => {
+    setFile(event.target.files[0]);
+    setMessage("");
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!description && !file) {
+      setMessage("Please provide a description or upload a file.");
+      setMessageColor(true);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("title", title);
+    if (toggleState) {
+      formData.append("file", file);
+    } else {
+      formData.append("description", description);
+    }
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/save-description",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (response.ok) {
+        setShowBtn(false);
+        setMessage("Description saved successfully!");
+        setMessageColor(false);
+        setTimeout(() => {
+          setMessage("Redirecting back...");
+          setTimeout(() => {
+            setShowDesc();
+          }, 5000); 
+        }, 5000);
+      } else {
+        const result = await response.json();
+        setMessage(result.message || "Failed to save the description.");
+        setMessageColor(true);
+      }
+    } catch (error) {
+      console.error("Error saving description:", error);
+      setMessage("An error occurred. Please try again.");
+      setMessageColor(true);
+    }
+  };
 
   return (
-    <div className="description-content" style={styles.container}>
-      <h2 style={styles.heading}>Provide Your Input</h2>
-      <div style={styles.radioGroup}>
-        <ToggleButton onToggle={handleToggle}></ToggleButton>
-      </div>
-
-      {toggleState === false ? (
-        <textarea
-          style={styles.textarea}
-          placeholder="Enter your description here..."
-          rows="8"
-        ></textarea>
-      ) : (
-        <div style={styles.fileUpload}>
-          <input
-            type="file"
-            id="file-input"
-            accept=".pdf,.txt"
-            style={styles.fileInput}
-          />
-          <label htmlFor="file-input" style={styles.label}>
-            Upload File
-          </label>
+    <div className="description-content">
+      <form onSubmit={handleSubmit}>
+        <h2>Provide Your Input</h2>
+        <div className="radio-group">
+          <ToggleButton onToggle={handleToggle}></ToggleButton>
         </div>
-      )}
 
-      <button style={styles.button}>Submit</button>
+        {!toggleState ? (
+          <textarea
+            className="textarea"
+            placeholder="Type or Paste the Text Here"
+            rows="8"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          ></textarea>
+        ) : (
+          <div
+            className="input-group mb-3"
+            style={{ width: "70%", justifySelf: "center" }}
+          >
+            <input
+              style={{ border: "1px solid grey" }}
+              type="file"
+              name = "file"
+              accept=".pdf,.txt"
+              className="form-control"
+              id="file-inp"
+              onChange={handleFileChange}
+            />
+          </div>
+        )}
+
+        {message && (
+          <p className="message" style={{ textAlign: "center", color: statusColor ? "red" : "green"}}>
+            {message}
+          </p>
+        )}
+        <button type="submit" className="submit-button mt-3" style={{display: isShowBtn ? "initial" : "none"}}>
+          Submit
+        </button>
+      </form>
     </div>
   );
 }
 
-const styles = {
-  container: {
-    backgroundColor: "#fff",
-    padding: "20px",
-    borderRadius: "10px",
-    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-    width: "50%",
-    margin: "0 auto",
-    textAlign: "center",
-    marginTop: "10vh",
-  },
-  heading: {
-    color: "#333",
-    marginBottom: "15px",
-  },
-  radioGroup: {
-    display: "flex",
-    justifyContent: "center",
-    marginBottom: "15px",
-  },
-  radioLabel: {
-    marginRight: "10px",
-    fontSize: "14px",
-    cursor: "pointer",
-  },
-  textarea: {
-    width: "100%",
-    padding: "10px",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
-    resize: "none",
-    outline: "none",
-    fontSize: "14px",
-    marginBottom: "15px",
-  },
-  fileUpload: {
-    marginBottom: "15px",
-  },
-  fileInput: {
-    display: "none",
-  },
-  label: {
-    backgroundColor: "#007BFF",
-    color: "#fff",
-    padding: "10px 15px",
-    borderRadius: "5px",
-    cursor: "pointer",
-    fontSize: "14px",
-  },
-  button: {
-    backgroundColor: "#28a745",
-    color: "#fff",
-    padding: "10px 15px",
-    border: "none",
-    borderRadius: "5px",
-    fontSize: "16px",
-    cursor: "pointer",
-  },
-};
-
-export default DescriptionContent;
+export default Description;

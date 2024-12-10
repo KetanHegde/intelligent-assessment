@@ -6,7 +6,7 @@ function ToggleButton({ onToggle }) {
   const toggleHandler = () => {
     const newState = !isToggled;
     setIsToggled(newState);
-    onToggle(newState); // Pass the new state to the parent
+    onToggle(newState);
   };
 
   return (
@@ -14,11 +14,11 @@ function ToggleButton({ onToggle }) {
       <div
         style={{
           ...styles.toggleSwitch,
-          backgroundColor: isToggled ? "#4CAF50" : "#ccc",
+          backgroundColor: isToggled ? "#0b7a7a" : "#3c0b75",
         }}
         onClick={toggleHandler}
-      ><p style={{...styles.statusText}}>Text</p>
-      <p style={{...styles.statusText}}>File</p>
+      ><p style={{...styles.statusText, color: isToggled ? "#ffffff" : "#000000"}}>Text</p>
+      <p style={{...styles.statusText,  color: isToggled ? "#000000" : "#fff"}}>File</p>
         <div
           style={{
             ...styles.toggleKnob,
@@ -36,7 +36,7 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     gap: "10px",
-    marginTop: "50px",
+    margin: "50px 0px",
     width:"80%",
   },
   toggleSwitch: {

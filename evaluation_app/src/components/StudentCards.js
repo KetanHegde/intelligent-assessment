@@ -20,7 +20,7 @@ function StudentCards({color}) {
     <div className="assessment_div" style={{ display: "flex", justifyContent: "center", gap: "3rem" , padding:"2rem", flexWrap:"wrap"}}>
     <InfoCard title={"Student Section"} desc={"The Create and Manage Groups feature allows teachers to organize students into groups, simplifying the scheduling and assignment of assessments. The Add and Manage Students feature enables efficient management of student data, including personal details and exam records, ensuring streamlined tracking and administration. These features help enhance workflow efficiency, making it easier for teachers to monitor student progress and manage assessments in a more organized manner."}/>
       <Card link={"/group-student"} viewBox={"100 0 750.74209 400.87759"} width={230} height={190} card_width={"22rem"} svgContent={group_svg} title={"Create and Manage Groups"} desc={"Create a group of students to easily schedule and assign assessments to them at a later time."}/>
-      <Card viewBox={"0 0 950.74209 500.87759"} svgContent={add_and_manage_student_svg} width={230} height={190} card_width={"22rem"}  title={"Add and Manage Students"} desc={"Add and manage student data, including personal details, for efficient tracking and administration."}/>
+      <Card link={"/add-manage-students"} viewBox={"0 0 950.74209 500.87759"} svgContent={add_and_manage_student_svg} width={230} height={190} card_width={"22rem"}  title={"Add and Manage Students"} desc={"Add and manage student data, including personal details, for efficient tracking and administration."}/>
     </div>
   );
 }

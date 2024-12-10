@@ -2,10 +2,10 @@ import ExamCards from "./ExamCards";
 import Welcome from "./Welcome";
 import StudentCards from "./StudentCards";
 import EvaluateAndAnalyzeCards from './EvaluateAndAnalyzeCards';
-function Home({color}) {
+function Home({color, title}) {
   return (
     <>
-    <Welcome/>
+    <Welcome title={title}/>
 <div>
   <ExamCards color={color}></ExamCards>
 </div>

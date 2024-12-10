@@ -1,0 +1,47 @@
+.inpFocus {
+  padding: 12px;
+  margin: 10px 0px;
+  border: 1px solid rgb(61, 68, 77);
+  border-radius: 10px;
+  font-size: 16px;
+  outline: none;
+  width: 100%;
+}
+
+.inpFocus4 {
+  border: 1px solid rgb(61, 68, 77);
+  border-radius: 8px 0px 0px 8px;
+}
+
+input.inpFocus4:focus 
+{
+  border-color: #1f6feb !important;
+  border-width: 2px !important;
+}
+
+.inpFocus1:focus, .inpFocus:focus {
+  border-color: #1f6feb !important;
+  border-width: 2px !important;
+}
+
+.inpFocus1 {
+  padding: 12px;
+  margin: 10px 0px;
+  border-left: 1px solid rgb(61, 68, 77);
+  border-right: 0px;
+  border-bottom: 1px solid rgb(61, 68, 77);
+  border-top: 1px solid rgb(61, 68, 77);
+  border-radius: 10px 0px 0px 10px;
+  font-size: 16px;
+  outline: none;
+  width: 100%;
+}
+
+.searchBtn {
+  border-radius: 0px 10px 10px 0px;
+  padding: 13px 30px;
+}
+
+.inpFocus1:focus + .searchBtn {
+  padding: 14px 32px;
+}
