@@ -6,6 +6,7 @@ import Navbar from "./Navbar";
 import "../css/StudentHome.css"; // Import CSS file
 import { Link } from 'react-router-dom';
 const StudentHome = () => {
+  const [usn, setUSN]= useState(null);
   const [evaluations, setEvaluations] = useState([]);
   const [groups, setGroups] = useState([]);
   const [student, setStudent] = useState(null);
@@ -31,6 +32,7 @@ const StudentHome = () => {
 
         setStudent(response.data.student);
         setStudentName(response.data.student.Name);
+        setUSN(response.data.student.USN);
         setGroups(response.data.groups || []);
         setEvaluations(response.data.evaluations || []);
         setLoginSuccess(true);
@@ -51,14 +53,14 @@ const StudentHome = () => {
   };
 
   const handleResultsClick = (evaluationId) => {
-    navigate(`/results/${evaluationId}`);
+    navigate(`/results/${evaluationId}/${usn}`);
   };
 
   // Render logic if not logged in
   if (!loginSuccess) {
     return (
       <div className="message-container">
-        Please log in to access your evaluations.
+        Please log in to continue.
         <br />
         <Link to="/login">Go to Login Page</Link>
       </div>
@@ -97,7 +99,7 @@ const StudentHome = () => {
 
       {/* Evaluations Section */}
       <div className="section mx-5">
-        <h3>Your Evaluations</h3>
+        <h3>Your Assessments</h3>
         {evaluations.length > 0 ? (
           <div className="card-grid">
             {evaluations.map((evaluation) => (
@@ -135,7 +137,7 @@ const StudentHome = () => {
             ))}
           </div>
         ) : (
-          <p className="empty-message">No evaluations found.</p>
+          <p className="empty-message">No Assessments found.</p>
         )}
       </div>
     </>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";  // Import useNavigate
 
 const EvaluationsList = () => {
   const [evaluations1, setEvaluations1] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();  // Initialize useNavigate
 
   useEffect(() => {
     const fetchEvaluations = async () => {
@@ -20,11 +22,11 @@ const EvaluationsList = () => {
           setEvaluations1(response.data.data); // Access evaluations from response.data.data
           setError(null);
         } else {
-          setError("Failed to load evaluations");
+          setError("Failed to load Assessments");
         }
       } catch (err) {
         console.error("Error fetching evaluations1:", err);
-        setError("Failed to load evaluations");
+        setError("Failed to load Assessments");
       } finally {
         setLoading(false);
       }
@@ -48,11 +50,11 @@ const EvaluationsList = () => {
             : evaluation
         );
         setEvaluations1(updatedEvaluations);
-        setMessage(`Evaluation status updated to '${newStatus}'!`);
+        setMessage(`Assessment status updated to '${newStatus}'!`);
       }
     } catch (err) {
-      console.error("Error updating evaluation status:", err);
-      setError("Failed to update evaluation status");
+      console.error("Error updating Assessment status:", err);
+      setError("Failed to update Assessment status");
     }
   };
 
@@ -68,7 +70,7 @@ const EvaluationsList = () => {
         updateStatus(evaluationId, "evaluated"); // Change status to 'evaluated'
         break;
       case "evaluated":
-        setMessage("Displaying the evaluation results...");
+        navigate(`/results/${evaluationId}`);  
         break;
       default:
         setMessage("");
@@ -84,12 +86,12 @@ const EvaluationsList = () => {
 
   return (
     <div className="container-fluid mt-5 px-4">
-      <h1 className="text-center mb-4">Evaluations</h1>
+      <h1 className="text-center mb-4">All Assessments</h1>
       {message && (
         <div className="alert alert-info text-center mb-4">{message}</div>
       )}
       {evaluations1.length === 0 ? (
-        <div className="alert alert-info text-center">No evaluations found</div>
+        <div className="alert alert-info text-center">No Assessments found</div>
       ) : (
         <div
           className="flex flex-wrap gap-4"

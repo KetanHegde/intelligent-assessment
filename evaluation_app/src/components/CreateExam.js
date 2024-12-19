@@ -61,7 +61,7 @@ const EvaluationCreationForm = () => {
         "http://localhost:5000/api/create-evaluation",
         formData
       );
-      alert("Evaluation created successfully!");
+      alert("Assessment created successfully!");
       console.log(response);
       setFormData({
         title: "",
@@ -80,7 +80,7 @@ const EvaluationCreationForm = () => {
       setStep(1);
     } catch (error) {
       console.error("Error creating evaluation:", error);
-      alert("Failed to create evaluation");
+      alert("Failed to create assessment");
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ const EvaluationCreationForm = () => {
       case 1:
         return (
           <div className="p-6">
-            <h2 className="text-2xl mb-4">Enter Evaluation Title</h2>
+            <h2 className="text-2xl mb-4">Enter Assessment Title</h2>
             <input
               type="text"
               value={formData.title}
@@ -99,7 +99,7 @@ const EvaluationCreationForm = () => {
                 setFormData({ ...formData, title: e.target.value })
               }
               className="w-full p-2 border rounded"
-              placeholder="Enter evaluation title"
+              placeholder="Enter assessment title"
             />
             <button
               onClick={handleNextStep}
@@ -186,7 +186,7 @@ const EvaluationCreationForm = () => {
       case 4:
         return (
           <div className="p-6">
-            <h2 className="text-2xl mb-4">Schedule Evaluation</h2>
+            <h2 className="text-2xl mb-4">Schedule Assessment</h2>
             <div className="flex space-x-4">
               <button
                 onClick={() => {
@@ -412,7 +412,7 @@ const EvaluationCreationForm = () => {
                 disabled={!formData.finishDateTime}
                 className="bg-green-500 text-white p-2 rounded disabled:opacity-50"
               >
-                Create Evaluation
+                Create Assessment
               </button>
             </div>
             {loading && (
@@ -435,7 +435,7 @@ const EvaluationCreationForm = () => {
   return (
     <div className="max-w-md mx-auto mt-10 bg-white shadow-md rounded-lg">
       <div className="p-4 bg-blue-100 text-center">
-        <h1 className="text-3xl font-bold">Create Evaluation</h1>
+        <h1 className="text-3xl font-bold">Create Assessment</h1>
         <div className="mt-2">Step {step} of 8</div>
       </div>
       {renderStep()}

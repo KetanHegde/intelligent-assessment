@@ -1,7 +1,7 @@
 import ExamCards from "./ExamCards";
 import Welcome from "./Welcome";
 import StudentCards from "./StudentCards";
-import EvaluateAndAnalyzeCards from './EvaluateAndAnalyzeCards';
+// import EvaluateAndAnalyzeCards from './EvaluateAndAnalyzeCards';
 import Navbar from "./Navbar";
 function Home({color, title}) {
 const name = localStorage.getItem("name");
@@ -12,10 +12,10 @@ const name = localStorage.getItem("name");
 <div>
   <ExamCards color={color}></ExamCards>
 </div>
-<hr />
-<div>
+
+{/* <div>
   <EvaluateAndAnalyzeCards color={color}/>
-</div>
+</div> */}
 <hr />
 <div>
   <StudentCards color={color}></StudentCards>

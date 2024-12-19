@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-const TestPage = ({ timeLimit = 60 }) => {
+const TestPage = () => {
   const { evaluationId } = useParams();
   const [questions, setQuestions] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [answers, setAnswers] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [timeRemaining, setTimeRemaining] = useState(timeLimit * 60);
+  const [timeRemaining, setTimeRemaining] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const [timeLimit, setTimeLimit] = useState(0);  // Add a state for timeLimit
   const navigate = useNavigate();
 
   const handleSubmit = useCallback(async () => {
@@ -102,24 +103,27 @@ const TestPage = ({ timeLimit = 60 }) => {
     return () => clearInterval(timer);
   }, [handleSubmit, hasStarted]);
 
-  // Fetch questions
+  // Fetch questions and timeLimit
   useEffect(() => {
-    const fetchQuestions = async () => {
+    const fetchEvaluationDetails = async () => {
       try {
         setIsLoading(true);
         const response = await fetch(
           `http://localhost:5000/api/questions/${evaluationId}`
         );
         const data = await response.json();
-        setQuestions(data);
+        console.log(data);
+        setQuestions(data.questions);
+        setTimeLimit(data.timeLimit); // Set the timeLimit from the evaluation data
+        setTimeRemaining(data.timeLimit * 60); // Convert timeLimit to seconds
       } catch (err) {
-        console.error("Error fetching questions:", err);
+        console.error("Error fetching evaluation details:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchQuestions();
+    fetchEvaluationDetails();
   }, [evaluationId]);
 
   const formatTime = (seconds) => {

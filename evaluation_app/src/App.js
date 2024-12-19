@@ -11,8 +11,10 @@ import RegisterForm from "./components/Register";
 import StudentHome from "./components/StudentHome";
 import Logout from "./components/Logout";
 import Test from "./components/Test";
+import ResultsStudentPage from "./components/ResultStudent";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import ResultsTeacherPage from "./components/ResultTeacher";
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
         <Route path="/student-dashboard" element={<StudentHome />}></Route>
         <Route path="/logout" element={<Logout />}></Route>
         <Route path="/test/:evaluationId" element={<Test />} />
+        <Route path="/results/:evaluationId/:usn" element={<ResultsStudentPage />} />
+        <Route path="/results/:evaluationId" element={<ResultsTeacherPage/>}/>
       </Routes>
     </Router>
   );

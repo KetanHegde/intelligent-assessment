@@ -72,7 +72,7 @@ const TitleAndText = () => {
     }
     else 
     {
-      navigate('/schedule-test-2');
+      navigate('/create-exam');
     }
   };
 
