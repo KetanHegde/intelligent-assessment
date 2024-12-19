@@ -366,6 +366,7 @@ function ExamCards({ color }) {
       />
       <Card
         svgContent={schedule_exam}
+        link={"/create-exam"}
         card_width={"22rem"}
         width={250}
         height={190}

@@ -6,6 +6,9 @@ import ScheduleTest from "./components/ScheduleTest";
 import StudentGroup from "./components/StudentGroup";
 import ScheduleTest2 from "./components/ScheduleTest2";
 import StudentManage from "./components/StudentManage";
+import ExamManager from "./components/CreateManageExam";
+import LoginForm from "./components/Login";
+import RegisterForm from "./components/Register";
 function App() {
   return (
     <Router>
@@ -18,6 +21,9 @@ function App() {
         <Route path="/group-student" element={<StudentGroup/>}/>
         <Route path="/schedule-test-2" element={<ScheduleTest2/>}></Route>
         <Route path="/add-manage-students" element={<StudentManage/>}></Route>
+        <Route path="/create-exam" element={<ExamManager/>}></Route>
+        <Route path="/login" element={<LoginForm/>}></Route>
+        <Route path="/register" element={<RegisterForm/>}></Route>
       </Routes>
     </Router>
   );

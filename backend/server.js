@@ -1,24 +1,104 @@
-const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const multer = require("multer");
-
+const express = require("express");
+const passport = require("passport");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const session = require("express-session");
+require("./passPortConfig"); 
 const app = express();
 const PORT = 5000;
-
+const connectDB = require('./config/db');
+const authRoutes = require('./routes/auth');
 app.use(cors());
 app.use(express.json());
-
+require('dotenv').config();
+const authenticate = require("./middleware/authenticate");
 const upload = multer();
 
-// MongoDB connection
-mongoose
-  .connect("mongodb://127.0.0.1:27017/evaluation_db", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("Failed to connect to MongoDB:", err));
+connectDB();
+app.use(express.urlencoded({ extended: true }));
+
+// Setup session
+app.use(session({
+  secret: 'Gz7@89fs2a9s!x93',
+  resave: false,
+  saveUninitialized: false,
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+app.use('/api/auth', authRoutes);
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Initialize Gemini API
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Base Question Schema with common fields
+const baseQuestionFields = {
+  evaluationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Evaluation',
+    required: true
+  },
+  question: {
+    type: String,
+    required: true
+  },
+  questionType: {
+    type: String,
+    enum: ['MCQ', 'descriptive'],
+    required: true
+  },
+  difficulty: {
+    type: String,
+    enum: ['easy', 'medium', 'hard'],
+    required: true
+  }
+};
+
+
+
+
+
+// Create schema with conditional fields based on questionType
+const questionSchema = new mongoose.Schema({
+  ...baseQuestionFields,
+  // MCQ fields (only required if questionType is MCQ)
+  options: {
+    type: [{
+      type: String
+    }],
+    required: function() {
+      return this.questionType === 'MCQ';
+    }
+  },
+  correctAnswer: {
+    type: String,
+    required: function() {
+      return this.questionType === 'MCQ';
+    }
+  },
+  // Descriptive fields (only required if questionType is descriptive)
+  sampleAnswer: {
+    type: String,
+    required: function() {
+      return this.questionType === 'descriptive';
+    }
+  },
+  keyPoints: {
+    type: [{
+      type: String
+    }],
+    required: function() {
+      return this.questionType === 'descriptive';
+    }
+  }
+}, { timestamps: true });
+
+const Question = mongoose.model('Question', questionSchema);
 
 const titleSchema = new mongoose.Schema({
   name: String,
@@ -31,7 +111,6 @@ const Title = mongoose.model("Title", titleSchema);
 const studentSchema = new mongoose.Schema({
   USN: String,
   Name: String,
-  Email: String,
 });
 const Student = mongoose.model("Students", studentSchema);
 
@@ -45,6 +124,74 @@ const locationSchema = new mongoose.Schema({
   name: String,
 });
 const Location = mongoose.model("Titles", locationSchema);
+
+const evaluationSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  topic: {
+    type: String,
+    required: true,
+  },
+  group: {
+    type: String,
+    required: true,
+  },
+  scheduleType: {
+    type: String,
+    enum: ["now", "later"],
+    required: true,
+  },
+  questionTypes: {
+    type: [String],
+    required: true,
+    validate: {
+      validator: function (v) {
+        return (
+          v.length > 0 &&
+          v.every((type) => ["mcq", "descriptive"].includes(type))
+        );
+      },
+      message: "Invalid question types",
+    },
+  },
+  questionDistribution: {
+    easy: {
+      type: Number,
+      min: 0,
+      required: true,
+    },
+    medium: {
+      type: Number,
+      min: 0,
+      required: true,
+    },
+    difficult: {
+      type: Number,
+      min: 0,
+      required: true,
+    },
+  },
+  timeLimit: {
+    type: Number,
+    min: 0,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  status: {
+    type: String,
+    enum: ["draft", "active", "completed", "evaluated"],
+    default: "draft",
+  },
+});
+
+const Evaluation = mongoose.model("Evaluation", evaluationSchema);
+
 
 // Existing routes from the first file
 app.post("/api/check-title", async (req, res) => {
@@ -73,6 +220,31 @@ app.post("/api/check-title", async (req, res) => {
     res.status(500).json({
       available: false,
       message: "An error occurred. Please try again.",
+    });
+  }
+});
+
+app.get("/api/titles", async (req, res) => {
+  try {
+    const { search } = req.query;
+    let titles;
+
+    if (search) {
+      // If search query is provided, perform a case-insensitive search
+      titles = await Title.find({
+        name: { $regex: search, $options: "i" },
+      });
+    } else {
+      // If no search query, return all titles
+      titles = await Title.find();
+    }
+
+    res.json(titles);
+  } catch (error) {
+    console.error("Error fetching titles:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching titles",
+      error: error.message,
     });
   }
 });
@@ -128,7 +300,6 @@ app.get("/students", async (req, res) => {
         $or: [
           { Name: { $regex: query, $options: "i" } },
           { USN: { $regex: query, $options: "i" } },
-          { Email: { $regex: query, $options: "i" } },
         ],
       }).limit(10);
     }
@@ -154,7 +325,100 @@ app.get("/locations", async (req, res) => {
   res.json(locations);
 });
 
-app.post("/groups", async (req, res) => {
+// Add this to your existing Express routes
+
+// Get all groups
+
+app.get("/api/groups", async (req, res) => {
+  try {
+    const { search } = req.query;
+    let groups;
+
+    if (search) {
+      // If search query is provided, perform a case-insensitive search
+      groups = await Group.find({
+        groupName: { $regex: search, $options: "i" },
+      });
+    } else {
+      groups = await Group.find();
+    }
+
+    res.json(groups);
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching groups",
+      error: error.message,
+    });
+  }
+});
+
+// Get a specific group by ID with detailed student information
+app.get("/groups/:groupId", async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.groupId).populate({
+      path: "students",
+      select: "Name USN", // Detailed student information
+    });
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    res.json(group);
+  } catch (error) {
+    console.error("Error fetching group details:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching group details",
+      error: error.message,
+    });
+  }
+});
+
+// Get group statistics
+app.get("/groups/stats", async (req, res) => {
+  try {
+    const stats = await Group.aggregate([
+      {
+        $lookup: {
+          from: "students", // Assuming the collection name is 'students'
+          localField: "students",
+          foreignField: "_id",
+          as: "studentDetails",
+        },
+      },
+      {
+        $addFields: {
+          studentCount: { $size: "$students" },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalGroups: { $sum: 1 },
+          totalStudents: { $sum: "$studentCount" },
+          averageGroupSize: { $avg: "$studentCount" },
+        },
+      },
+    ]);
+
+    res.json(
+      stats[0] || {
+        totalGroups: 0,
+        totalStudents: 0,
+        averageGroupSize: 0,
+      }
+    );
+  } catch (error) {
+    console.error("Error fetching group statistics:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching group statistics",
+      error: error.message,
+    });
+  }
+});
+
+app.post("/create-groups", async (req, res) => {
   try {
     const { groupName, students } = req.body;
     // Validate input
@@ -334,28 +598,28 @@ app.delete("/groups/:groupId", async (req, res) => {
 // Create a new student
 app.post("/api/students", async (req, res) => {
   try {
-    const { USN, Name, Email } = req.body;
+    const { USN, Name} = req.body;
 
     // Validate input
-    if (!USN || !Name || !Email) {
+    if (!USN || !Name ) {
       return res
         .status(400)
-        .json({ message: "USN, Name, and Email are required" });
+        .json({ message: "USN and Name are required" });
     }
 
     // Check if student with same USN or Email already exists
     const existingStudent = await Student.findOne({
-      $or: [{ USN }, { Email }],
+      $or: [{ USN }],
     });
 
     if (existingStudent) {
       return res.status(400).json({
-        message: "A student with this USN or Email already exists",
+        message: "A student with this USN already exists",
       });
     }
 
     // Create new student
-    const newStudent = new Student({ USN, Name, Email });
+    const newStudent = new Student({ USN, Name });
     await newStudent.save();
 
     res.status(201).json(newStudent);
@@ -371,17 +635,17 @@ app.post("/api/students", async (req, res) => {
 app.put("/api/students/:usn", async (req, res) => {
   try {
     const { usn } = req.params;
-    const { Name, Email } = req.body;
+    const { Name } = req.body;
 
     // Validate input
-    if (!Name || !Email) {
-      return res.status(400).json({ message: "Name and Email are required" });
+    if (!Name) {
+      return res.status(400).json({ message: "Name is required" });
     }
 
     // Find and update the student
     const student = await Student.findOneAndUpdate(
       { USN: usn },
-      { Name, Email },
+      { Name },
       {
         new: true, // Return the updated document
         runValidators: true, // Run mongoose validation
@@ -468,18 +732,18 @@ app.post("/api/students/upload", upload.single("file"), async (req, res) => {
 
     for (const record of parsedData) {
       // Validate each record
-      if (!record.USN || !record.Name || !record.Email) {
+      if (!record.USN || !record.Name) {
         errors.push(`Invalid record: ${JSON.stringify(record)}`);
         continue;
       }
 
       // Check for duplicates before inserting
       const existingStudent = await Student.findOne({
-        $or: [{ USN: record.USN }, { Email: record.Email }],
+        $or: [{ USN: record.USN }],
       });
 
       if (existingStudent) {
-        errors.push(`Duplicate student: ${record.USN} or ${record.Email}`);
+        errors.push(`Duplicate student: ${record.USN}`);
         continue;
       }
 
@@ -502,6 +766,330 @@ app.post("/api/students/upload", upload.single("file"), async (req, res) => {
       .json({ message: "An error occurred while uploading students" });
   }
 });
+
+// Add create evaluation route
+app.post("/api/create-evaluation", async (req, res) => {
+  try {
+    const {
+      title,
+      topic,
+      group,
+      scheduleType,
+      questionTypes,
+      questionDistribution,
+      timeLimit,
+    } = req.body;
+
+    // Validate input
+    if (!title || !topic || !group) {
+      return res.status(400).json({
+        message: "Title, topic, and group are required",
+      });
+    }
+
+    // Verify topic exists
+    const existingTopic = await Title.findOne({ name: topic });
+    if (!existingTopic) {
+      return res.status(400).json({
+        message: "Selected topic does not exist",
+      });
+    }
+
+    // Verify group exists
+    const existingGroup = await Group.findOne({ groupName: group });
+    if (!existingGroup) {
+      return res.status(400).json({
+        message: "Selected group does not exist",
+      });
+    }
+
+    // Validate question types
+    if (!questionTypes || questionTypes.length === 0) {
+      return res.status(400).json({
+        message: "At least one question type must be selected",
+      });
+    }
+
+    // Validate question distribution
+    const totalQuestions =
+      questionDistribution.easy +
+      questionDistribution.medium +
+      questionDistribution.difficult;
+
+    if (totalQuestions === 0) {
+      return res.status(400).json({
+        message: "At least one question must be added",
+      });
+    }
+
+    // Validate time limit
+    if (timeLimit < 0) {
+      return res.status(400).json({
+        message: "Time limit must be a non-negative number",
+      });
+    }
+
+    // Create new evaluation
+    const newEvaluation = new Evaluation({
+      title,
+      topic,
+      group,
+      scheduleType,
+      questionTypes,
+      questionDistribution,
+      timeLimit,
+      status: scheduleType === "now" ? "active" : "draft",
+    });
+
+    // Save evaluation
+    await newEvaluation.save();
+
+    res.status(201).json({
+      message: "Evaluation created successfully",
+      evaluation: newEvaluation,
+    });
+  } catch (error) {
+    console.error("Error creating evaluation:", error);
+    res.status(500).json({
+      message: "An error occurred while creating the evaluation",
+      error: error.message,
+    });
+  }
+});
+
+// Evaluation Fetch Route with Time Check
+app.get("/api/evaluations", async (req, res) => {
+  console.log(`[INFO] [${new Date().toISOString()}] - Incoming request to /api/evaluations`);
+
+  try {
+    // Fetch all evaluations
+    const evaluations = await Evaluation.find().lean();
+
+    console.log(`[SUCCESS] Fetched ${evaluations.length} evaluations.`);
+    if (evaluations.length > 0) {
+      console.log(`[DEBUG] Sample Evaluation:`, evaluations[0]);
+
+      // Check if the time limit has passed for any evaluation
+      const currentTime = new Date().getTime();
+      for (const evaluation of evaluations) {
+        // Calculate if the time limit has passed (status is 'active' and time has passed)
+        if (evaluation.status === "active" && currentTime >= new Date(evaluation.createdAt).getTime() + evaluation.timeLimit * 1000) {
+          // Update the status to 'completed'
+          await Evaluation.findByIdAndUpdate(evaluation._id, { status: "completed" });
+          console.log(`[INFO] Updated evaluation ${evaluation._id} status to 'completed'`);
+        }
+      }
+    } else {
+      console.log(`[INFO] No evaluations found.`);
+    }
+
+    // Send structured success response
+    return res.status(200).json({
+      success: true,
+      count: evaluations.length,
+      data: evaluations
+    });
+  } catch (error) {
+    console.error(`[ERROR] Failed to fetch evaluations:`, error.message);
+
+    // Send structured error response
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching evaluations.",
+      error: {
+        message: error.message,
+        ...(process.env.NODE_ENV === "development" && { stack: error.stack })
+      }
+    });
+  }
+});
+
+
+// Background job to update evaluation status (you'd typically use a task scheduler like node-cron)
+const checkEvaluationStatus = async () => {
+  try {
+    const now = new Date();
+    
+    // Find active evaluations that have passed their time limit
+    const expiredEvaluations = await Evaluation.find({
+      status: 'active',
+      createdAt: { $lt: new Date(now.getTime() - this.timeLimit * 60000) }
+    });
+
+    for (const evaluation of expiredEvaluations) {
+      evaluation.status = 'completed';
+      await evaluation.save();
+    }
+  } catch (error) {
+    console.error("Error checking evaluation status:", error);
+  }
+};
+
+// Run status check every 5 minutes
+setInterval(checkEvaluationStatus, 5 * 60 * 1000);
+
+// Function to generate MCQ questions
+async function generateMCQQuestions(description, topic, numQuestions = 5) {
+  const prompt = `Generate ${numQuestions} multiple choice questions about ${topic}. 
+    Context: ${description}
+    For each question, provide:
+    1. The question text
+    2. Four options (A, B, C, D)
+    3. The correct answer
+    4. Difficulty level (easy/medium/hard)
+    Format the response as a plain JSON array of objects with:
+    {
+      "question": "question text",
+      "questionType": "MCQ",
+      "options": ["A", "B", "C", "D"],
+      "correctAnswer": "correct option",
+      "difficulty": "difficulty level"
+    }`;
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(prompt);
+  const rawResponse = await result.response.text();
+  console.log("Raw MCQ Response:", rawResponse);
+  let cleanedResponse = rawResponse.replace(/```(?:json)?/g, '').trim();
+  return JSON.parse(cleanedResponse);
+}
+
+async function generateDescriptiveQuestions(description, topic, numQuestions = 5) {
+  const prompt = `Generate ${numQuestions} descriptive questions about ${topic}. 
+    Context: ${description}
+    For each question, provide:
+    1. The question text
+    2. A sample answer
+    3. Key points that should be covered in the answer (3-5 points)
+    4. Difficulty level (easy/medium/hard)
+    Format the response as a plain JSON array of objects with:
+    {
+      "question": "question text",
+      "questionType": "descriptive",
+      "sampleAnswer": "detailed sample answer",
+      "keyPoints": ["key point 1", "key point 2", "key point 3"],
+      "difficulty": "difficulty level"
+    }`;
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(prompt);
+  const rawResponse = await result.response.text();
+  console.log("Raw Descriptive Response:", rawResponse);
+  let cleanedResponse = rawResponse.replace(/```(?:json)?/g, '').trim();
+  return JSON.parse(cleanedResponse);
+}
+
+
+app.put("/api/evaluations/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  // Validate Evaluation ID
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid evaluation ID.",
+    });
+  }
+
+  // Validate Status
+  const validStatuses = ["draft", "active", "completed"];
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status value. Allowed values are 'draft', 'active', 'completed'.",
+    });
+  }
+
+  try {
+    // Fetch the evaluation by ID
+    console.log(`[INFO] Fetching evaluation with ID: ${id}`);
+    const evaluation = await Evaluation.findById(id);
+
+    if (!evaluation) {
+      return res.status(404).json({
+        success: false,
+        message: "Evaluation not found.",
+      });
+    }
+
+    // Handle transition from 'draft' to 'active'
+    if (evaluation.status === "draft" && status === "active") {
+      console.log("[INFO] Transitioning from 'draft' to 'active'...");
+      // Find the associated title
+      const title = await Title.findOne({ name: evaluation.topic });
+      if (!title) {
+        return res.status(404).json({
+          success: false,
+          message: "Associated title not found.",
+        });
+      }
+
+      // Generate Questions
+      let generatedQuestions;
+      try {
+        console.log("[INFO] Generating questions...");
+        if (evaluation.questionType === "MCQ") {
+          generatedQuestions = await generateMCQQuestions(title.description, evaluation.topic);
+        } else {
+          generatedQuestions = await generateDescriptiveQuestions(title.description, evaluation.topic);
+        }
+
+        if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
+          throw new Error("No questions generated or generation failed.");
+        }
+      } catch (err) {
+        console.error("[ERROR] Question generation failed:", err.message);
+        return res.status(500).json({
+          success: false,
+          message: "Question generation failed.",
+          error: { message: err.message },
+        });
+      }
+
+      // Save Generated Questions
+      console.log("[INFO] Saving generated questions...");
+      const questionPromises = generatedQuestions.map((q) => {
+        const question = new Question({
+          evaluationId: evaluation._id,
+          ...q,
+        });
+        return question.save().catch((err) => {
+          console.error("[ERROR] Failed to save question:", err.message);
+        });
+      });
+
+      await Promise.all(questionPromises);
+    }
+
+    // Update the evaluation status
+    console.log("[INFO] Updating evaluation status...");
+    const updatedEvaluation = await Evaluation.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedEvaluation) {
+      throw new Error("Failed to update the evaluation status.");
+    }
+
+    console.log("[INFO] Evaluation status updated successfully.");
+    return res.status(200).json({
+      success: true,
+      data: updatedEvaluation,
+    });
+  } catch (error) {
+    console.error("[ERROR] Failed to update evaluation status:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while updating the status.",
+      error: {
+        message: error.message,
+        ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
+      },
+    });
+  }
+});
+
 
 // Start the server
 app.listen(PORT, () => {

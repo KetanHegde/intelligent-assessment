@@ -110,7 +110,7 @@ const MultiSelectStudentSelector = () => {
       // Extract only the student IDs
       const studentIds = selectedStudents.map((student) => student._id);
 
-      const response = await axios.post("http://localhost:5000/groups", {
+      const response = await axios.post("http://localhost:5000/create-groups", {
         groupName,
         students: studentIds,
       });
