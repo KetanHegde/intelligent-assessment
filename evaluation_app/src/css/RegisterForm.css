@@ -1,0 +1,85 @@
+.form-container {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+    /* border: 0.75px solid reba(0, 0, 0, 0.175); */
+    border: 1.5px solid rgba(0, 0, 0, 0.175);
+    border-radius: 15px;
+    margin-top: 10vh;
+}
+
+.form-title {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input {
+    width: 100%;
+    padding: 10px 10px 10px 5px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.input:focus {
+    border-color: #0d6efd;
+}
+
+.floating-label {
+    position: absolute;
+    top: 20%;
+    left: 5px;
+    font-size: 16px;
+    color: #aaa;
+    pointer-events: none;
+    transition: all 0.2s ease-out;
+    background-color: white;
+    padding: 0 5px; /* Padding to prevent overlap with the border */
+}
+
+.input:focus + .floating-label,
+.input.active + .floating-label {
+    top: -10px;
+    font-size: 12px;
+    color: #0d6efd;
+}
+
+.input:focus {
+    border: 2px solid #0d6efd;
+    padding: 9px 9px 9px 4px; /* Adjust padding to account for the border width */
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.submit-btn:hover {
+    background-color: #0d6efd;
+}
+
+.message {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.message.success {
+    color: blue;
+}
+
+.message.error {
+    color: red;
+}

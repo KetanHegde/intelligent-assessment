@@ -51,7 +51,7 @@ const StudentForm = () => {
       body: JSON.stringify({
         username: inputValues.USN, // Use the USN as the username
         name: inputValues.Name,
-        password: "xyzzzzz", // Use Email as the password or generate a password
+        password: "1234", // Use Email as the password or generate a password
         role: "student", // Set role as student
         email : inputValues.Email,
       }),
@@ -69,6 +69,28 @@ const StudentForm = () => {
     } else {
       setMessage(`Registration failed: ${data.message}`);
     }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ USN: inputValues.USN, Name: inputValues.Name }),
+      });
+    
+      const data = await response.json();
+    
+      if (response.ok) {
+        setMessage("Student added successfully!");
+      } else {
+        setMessage(data.message || "Failed to add student.");
+      }
+    } catch (error) {
+      setMessage("Error occurred while adding student.");
+      console.error("Error:", error);
+    }    
+
   };
 
   return (

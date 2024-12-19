@@ -18,16 +18,13 @@ const EvaluationCreationForm = () => {
   });
   const [topics, setTopics] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(false); // Add loading state
 
   useEffect(() => {
     const fetchTopicsAndGroups = async () => {
       try {
-        const topicsResponse = await axios.get(
-          "http://localhost:5000/api/titles"
-        );
-        const groupsResponse = await axios.get(
-          "http://localhost:5000/api/groups"
-        );
+        const topicsResponse = await axios.get("http://localhost:5000/api/titles");
+        const groupsResponse = await axios.get("http://localhost:5000/api/groups");
 
         setTopics(topicsResponse.data);
         setGroups(groupsResponse.data);
@@ -53,14 +50,31 @@ const EvaluationCreationForm = () => {
   };
 
   const handleSubmit = async () => {
+    setLoading(true); // Set loading to true
     try {
       const response = await axios.post("http://localhost:5000/api/create-evaluation", formData);
       alert("Evaluation created successfully!");
       console.log(response);
+      setFormData({
+        title: "",
+        topic: "",
+        group: null,
+        scheduleType: null,
+        questionTypes: [],
+        questionDistribution: {
+          easy: 0,
+          medium: 0,
+          difficult: 0,
+        },
+        timeLimit: 0,
+      });
+      setStep(1);
       // Reset form or redirect
     } catch (error) {
       console.error("Error creating evaluation:", error);
       alert("Failed to create evaluation");
+    } finally {
+      setLoading(false); // Set loading to false after submission is complete
     }
   };
 
@@ -363,6 +377,14 @@ const EvaluationCreationForm = () => {
                 Create Evaluation
               </button>
             </div>
+
+            {/* Show loading spinner and text when submitting */}
+            {loading && (
+              <div className="mt-4 text-center">
+                <div className="spinner-border animate-spin inline-block w-6 h-6 border-4 border-current border-t-transparent rounded-full" role="status"></div>
+                <span className="ml-2">Creating...</span>
+              </div>
+            )}
           </div>
         );
 
@@ -383,4 +405,3 @@ const EvaluationCreationForm = () => {
 };
 
 export default EvaluationCreationForm;
-

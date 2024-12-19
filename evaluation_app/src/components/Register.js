@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-
+import "../css/RegisterForm.css"; // External CSS file
+import { Link } from 'react-router-dom';
 const RegisterForm = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const role = "teacher"; 
   const [message, setMessage] = useState("");
+
+  const role = "teacher";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +19,7 @@ const RegisterForm = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, name, password, role, email }),
+        body: JSON.stringify({ username, name, email, password, role }),
       });
 
       const data = await response.json();
@@ -33,59 +35,90 @@ const RegisterForm = () => {
   };
 
   return (
-    <div>
-      <h2>User Registration</h2>
+    <div className="form-container">
+      <h2 className="form-title">User Registration</h2>
       <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="username">Username</label>
+        {/* Username Field */}
+        <div className="form-group">
           <input
             type="text"
             id="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter username"
             required
+            className={username ? "input active" : "input"}
           />
+          <label htmlFor="username" className="floating-label">
+            Username
+          </label>
         </div>
-        <div>
-          <label htmlFor="name">Name</label>
+
+        {/* Name Field */}
+        <div className="form-group">
           <input
             type="text"
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Enter Name"
             required
+            className={name ? "input active" : "input"}
           />
+          <label htmlFor="name" className="floating-label">
+            Name
+          </label>
         </div>
-        <div>
-          <label htmlFor="email">Email</label>
+
+        {/* Email Field */}
+        <div className="form-group">
           <input
             type="email"
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter Email"
             required
+            className={email ? "input active" : "input"}
           />
+          <label htmlFor="email" className="floating-label">
+            Email
+          </label>
         </div>
-        <div>
-          <label htmlFor="password">Password:</label>
+
+        {/* Password Field */}
+        <div className="form-group">
           <input
             type="password"
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
             required
+            className={password ? "input active" : "input"}
           />
+          <label htmlFor="password" className="floating-label">
+            Password
+          </label>
         </div>
-        
-        <button type="submit">Register</button>
+
+        <button type="submit" className="submit-btn">
+          Register
+        </button>
       </form>
-      {message && <p>{message}</p>}
+
+      <div style={{textAlign:"center"}} className="mt-3">
+        <p><Link to="/login">Click Here </Link>To Login</p>
+      </div>
+
+      {message && (
+        <p
+          className={`message ${
+            message.includes("Error") ? "error" : "success"
+          }`}
+        >
+          {message}
+        </p>
+      )}
     </div>
   );
 };
 
 export default RegisterForm;
+

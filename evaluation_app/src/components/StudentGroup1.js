@@ -219,7 +219,6 @@ const MultiSelectStudentSelector = () => {
                     <span className="mr-2 font-medium">{student.Name}</span>
                     <span className="text-gray-500 text-sm">{student.USN}</span>
                   </div>
-                  <span className="text-xs text-gray-500">{student.Email}</span>
                 </div>
                 {selectedStudents.some((s) => s._id === student._id) && (
                   <Check size={20} className="text-green-500" />

@@ -81,13 +81,6 @@ const questionSchema = new mongoose.Schema({
       return this.questionType === 'MCQ';
     }
   },
-  // Descriptive fields (only required if questionType is descriptive)
-  sampleAnswer: {
-    type: String,
-    required: function() {
-      return this.questionType === 'descriptive';
-    }
-  },
   keyPoints: {
     type: [{
       type: String
@@ -99,6 +92,21 @@ const questionSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const Question = mongoose.model('Question', questionSchema);
+
+
+const submittedAnswerSchema = new mongoose.Schema({
+  usn: { type: String, required: true },
+  evaluationId: { type: String, required: true },
+  answers: [
+    {
+      questionId: { type: String, required: true },
+      answer: { type: String, required: true },
+    },
+  ],
+});
+
+const SubmittedAnswer = mongoose.model('SubmittedAnswers', submittedAnswerSchema);
+
 
 const titleSchema = new mongoose.Schema({
   name: String,
@@ -191,7 +199,85 @@ const evaluationSchema = new mongoose.Schema({
 });
 
 const Evaluation = mongoose.model("Evaluation", evaluationSchema);
+app.get('/api/evaluations/home', authenticate, async (req, res) => {
+  try {
+    console.log("Authenticated User:", req.user.username);
 
+    // Find the student based on the authenticated user's USN
+    const student = await Student.findOne({ USN: req.user.username });
+
+    if (!student) {
+      return res.status(200).json({ 
+        message: 'Student not found',
+        student: null,
+        groups: [],
+        evaluations: []
+      });
+    }
+
+    // Find all groups the student belongs to
+    const groups = await Group.find({ students: student._id });
+
+    // Extract group names
+    const groupNames = groups.length ? groups.map(group => group.groupName) : [];
+
+    // Find evaluations for all the groups
+    const evaluations = await Evaluation.find({ group: { $in: groupNames } });
+
+    // Return all data, even if some arrays are empty
+    res.json({ 
+      student,
+      groups,
+      evaluations,
+      message: !groups.length ? 'No groups found' : 
+               !evaluations.length ? 'No evaluations found' : null
+    });
+
+  } catch (error) {
+    console.error("Error fetching evaluations:", error);
+    res.status(500).send('Server error');
+  }
+});
+
+app.get('/api/questions/:evaluationId', async (req, res) => {
+  try {
+    const questions = await Question.find({ evaluationId: req.params.evaluationId });
+    console.log(req.params.evaluationId);
+    console.log(questions);
+    res.status(200).json(questions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Get detailed evaluation information (for a specific test)
+app.get('/api/evaluations/:id', authenticate, async (req, res) => {
+  try {
+    const evaluation = await Evaluation.findById(req.params.id).populate('questions');
+    if (!evaluation) {
+      return res.status(404).send('Evaluation not found');
+    }
+
+    res.json(evaluation);
+  } catch (error) {
+    res.status(500).send('Server error');
+  }
+});
+
+// Get results for a specific evaluation
+app.get('/api/evaluations/results/:id', authenticate, async (req, res) => {
+  try {
+    const evaluation = await Evaluation.findById(req.params.id).populate('results');
+    if (!evaluation) {
+      return res.status(404).send('Evaluation results not found');
+    }
+
+    res.json(evaluation.results);
+  } catch (error) {
+    res.status(500).send('Server error');
+  }
+});
 
 // Existing routes from the first file
 app.post("/api/check-title", async (req, res) => {
@@ -329,6 +415,38 @@ app.get("/locations", async (req, res) => {
 
 // Get all groups
 
+
+
+// New group management routes from the second file
+app.get("/groups/search", async (req, res) => {
+  try {
+    const { groupName } = req.query;
+
+    // Ensure that groupName is provided
+    if (!groupName) {
+      return res.status(400).json({ error: "Group name is required" });
+    }
+
+    // Search for group by name using regex (no ObjectId involved here)
+    const group = await Group.findOne({
+      groupName: { $regex: new RegExp(`^${groupName.trim()}$`, "i") },
+    }).populate("students");
+
+    // If no group is found, return 404
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    // Return the group data if found
+    res.json(group);
+  } catch (error) {
+    console.error("Error during group search:", error);
+    res.status(500).json({ error: "An error occurred while searching for the group" });
+  }
+});
+
+
+
 app.get("/api/groups", async (req, res) => {
   try {
     const { search } = req.query;
@@ -459,29 +577,6 @@ app.post("/create-groups", async (req, res) => {
   }
 });
 
-// New group management routes from the second file
-app.get("/groups/search", async (req, res) => {
-  try {
-    const { groupName } = req.query;
-    if (!groupName) {
-      return res.status(400).json({ error: "Group name is required" });
-    }
-
-    const group = await Group.findOne({
-      groupName: { $regex: new RegExp(`^${groupName.trim()}$`, "i") },
-    }).populate("students");
-
-    if (!group) {
-      return res.status(404).json({ error: "Group not found" });
-    }
-    res.json(group);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ error: "An error occurred while searching for the group" });
-  }
-});
-
 app.delete("/groups/:groupId/students/:studentId", async (req, res) => {
   try {
     const { groupId, studentId } = req.params;
@@ -593,9 +688,24 @@ app.delete("/groups/:groupId", async (req, res) => {
   }
 });
 
-// Add these routes to the existing Express application
 
-// Create a new student
+
+// Logout route
+app.post('/logout', (req, res) => {
+  try {
+    // Clear the JWT token cookie
+    res.clearCookie('token');  // This will clear the 'token' cookie
+
+    // Optionally, if you're using a blacklist system for invalidating tokens:
+    // const blacklistedTokens = await TokenBlacklist.create({ token: req.cookies.token });
+
+    res.json({ message: 'Successfully logged out' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'An error occurred while logging out' });
+  }
+});
+
 app.post("/api/students", async (req, res) => {
   try {
     const { USN, Name} = req.body;
@@ -783,6 +893,7 @@ app.post("/api/create-evaluation", async (req, res) => {
     // Validate input
     if (!title || !topic || !group) {
       return res.status(400).json({
+        success: false,
         message: "Title, topic, and group are required",
       });
     }
@@ -791,6 +902,7 @@ app.post("/api/create-evaluation", async (req, res) => {
     const existingTopic = await Title.findOne({ name: topic });
     if (!existingTopic) {
       return res.status(400).json({
+        success: false,
         message: "Selected topic does not exist",
       });
     }
@@ -799,6 +911,7 @@ app.post("/api/create-evaluation", async (req, res) => {
     const existingGroup = await Group.findOne({ groupName: group });
     if (!existingGroup) {
       return res.status(400).json({
+        success: false,
         message: "Selected group does not exist",
       });
     }
@@ -806,6 +919,7 @@ app.post("/api/create-evaluation", async (req, res) => {
     // Validate question types
     if (!questionTypes || questionTypes.length === 0) {
       return res.status(400).json({
+        success: false,
         message: "At least one question type must be selected",
       });
     }
@@ -818,6 +932,7 @@ app.post("/api/create-evaluation", async (req, res) => {
 
     if (totalQuestions === 0) {
       return res.status(400).json({
+        success: false,
         message: "At least one question must be added",
       });
     }
@@ -825,6 +940,7 @@ app.post("/api/create-evaluation", async (req, res) => {
     // Validate time limit
     if (timeLimit < 0) {
       return res.status(400).json({
+        success: false,
         message: "Time limit must be a non-negative number",
       });
     }
@@ -842,20 +958,75 @@ app.post("/api/create-evaluation", async (req, res) => {
     });
 
     // Save evaluation
-    await newEvaluation.save();
+    const savedEvaluation = await newEvaluation.save();
 
+    // If scheduled for "now", generate questions immediately
+    if (scheduleType === "now") {
+      console.log("[INFO] 'Schedule now' selected, generating questions...");
+
+      // Find the associated title
+      const titleRecord = await Title.findOne({ name: savedEvaluation.topic });
+      if (!titleRecord) {
+        return res.status(400).json({
+          success: false,
+          message: "Associated title not found for question generation.",
+        });
+      }
+
+      // Generate Questions
+      let generatedQuestions;
+      try {
+        console.log("[INFO] Generating questions...");
+        if (savedEvaluation.questionTypes.includes("MCQ")) {
+          generatedQuestions = await generateMCQQuestions(titleRecord.description, savedEvaluation.topic);
+        } else {
+          generatedQuestions = await generateDescriptiveQuestions(titleRecord.description, savedEvaluation.topic);
+        }
+
+        if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
+          throw new Error("No questions generated or generation failed.");
+        }
+
+        // Save Generated Questions
+        console.log("[INFO] Saving generated questions...");
+        const questionPromises = generatedQuestions.map((q) => {
+          const question = new Question({
+            evaluationId: savedEvaluation._id,
+            ...q,
+          });
+          return question.save().catch((err) => {
+            console.error("[ERROR] Failed to save question:", err.message);
+          });
+        });
+
+        await Promise.all(questionPromises);
+        console.log("[INFO] Questions generated and saved successfully.");
+      } catch (err) {
+        console.error("[ERROR] Question generation failed:", err.message);
+        return res.status(500).json({
+          success: false,
+          message: "Question generation failed.",
+          error: { message: err.message },
+        });
+      }
+    }
+
+    // Return the created evaluation
     res.status(201).json({
+      success: true,
       message: "Evaluation created successfully",
-      evaluation: newEvaluation,
+      evaluation: savedEvaluation,
     });
   } catch (error) {
     console.error("Error creating evaluation:", error);
     res.status(500).json({
+      success: false,
       message: "An error occurred while creating the evaluation",
       error: error.message,
     });
   }
 });
+
 
 // Evaluation Fetch Route with Time Check
 app.get("/api/evaluations", async (req, res) => {
@@ -958,14 +1129,12 @@ async function generateDescriptiveQuestions(description, topic, numQuestions = 5
     Context: ${description}
     For each question, provide:
     1. The question text
-    2. A sample answer
-    3. Key points that should be covered in the answer (3-5 points)
-    4. Difficulty level (easy/medium/hard)
+    2. Key points that should be covered in the answer (3-5 points)
+    3. Difficulty level (easy/medium/hard)
     Format the response as a plain JSON array of objects with:
     {
       "question": "question text",
       "questionType": "descriptive",
-      "sampleAnswer": "detailed sample answer",
       "keyPoints": ["key point 1", "key point 2", "key point 3"],
       "difficulty": "difficulty level"
     }`;
@@ -977,6 +1146,23 @@ async function generateDescriptiveQuestions(description, topic, numQuestions = 5
   return JSON.parse(cleanedResponse);
 }
 
+app.post('/api/submit-answers', async (req, res) => {
+  try {
+    const { usn, evaluationId, answers } = req.body;
+
+    // Save the submitted answers
+    const submittedAnswer = new SubmittedAnswer({
+      usn,
+      evaluationId,
+      answers,
+    });
+
+    await submittedAnswer.save();
+    res.status(201).json({ message: 'Answers submitted successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.put("/api/evaluations/:id/status", async (req, res) => {
   const { id } = req.params;
@@ -1089,7 +1275,6 @@ app.put("/api/evaluations/:id/status", async (req, res) => {
     });
   }
 });
-
 
 // Start the server
 app.listen(PORT, () => {

@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Home from './components/Home';
-import Navbar from "./components/Navbar";
+import TeacherHome from './components/TeacherHome';
 import TitleAndText from "./components/TitleAndText";
 import ScheduleTest from "./components/ScheduleTest";
 import StudentGroup from "./components/StudentGroup";
@@ -9,12 +8,18 @@ import StudentManage from "./components/StudentManage";
 import ExamManager from "./components/CreateManageExam";
 import LoginForm from "./components/Login";
 import RegisterForm from "./components/Register";
+import StudentHome from "./components/StudentHome";
+import Logout from "./components/Logout";
+import Test from "./components/Test";
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
+
 function App() {
   return (
     <Router>
-      <Navbar />
       <Routes>
-        <Route path="/" element={<Home color={"#1347bd"} title={"EduAssessMate"}/>} />
+        <Route path="/teacher-dashboard" element={<TeacherHome color={"#1347bd"} title={"EduAssessMate"}/>} />
         <Route path="/input_topic_and_text" element={<TitleAndText/>}/>
         <Route path="/add-title" element={<TitleAndText/>}/>
         <Route path="/schedule-test" element={<ScheduleTest/>}/>
@@ -24,6 +29,9 @@ function App() {
         <Route path="/create-exam" element={<ExamManager/>}></Route>
         <Route path="/login" element={<LoginForm/>}></Route>
         <Route path="/register" element={<RegisterForm/>}></Route>
+        <Route path="/student-dashboard" element={<StudentHome/>}></Route>
+        <Route path="/logout" element={<Logout/>}></Route>
+        <Route path="/test/:evaluationId" element={<Test />} />
       </Routes>
     </Router>
   );

@@ -10,38 +10,30 @@ const GroupManagement = () => {
   const [message, setMessage] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
 
-  const handleSearchGroup = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/groups/search", {
-        params: { groupName: searchGroupName },
-      });
-      setErrorStatus(false);
-      setMessage("");
-      setGroup(response.data);
-    } catch (error) {
-      if (error.response?.status === 404) {
-        setMessage("Group not found");
-        setErrorStatus(true);
-      } else {
-        setMessage(error.response?.data?.error || "Error searching group");
-        setErrorStatus(true);
-      }
-    }
-  };
+  // Searching for a group
+const handleSearchGroup = async () => {
+  if (!searchGroupName) {
+    setMessage("Please enter a group name");
+    setErrorStatus(true);
+    return;
+  }
 
-  // Remove student from group
-  const handleRemoveStudent = async (studentId) => {
-    try {
-      const response = await axios.delete(
-        `http://localhost:5000/groups/${group._id}/students/${studentId}`
-      );
-      setGroup(response.data);
-      setMessage("");
-    } catch (error) {
-      setMessage(error.response?.data?.error || "Error removing student");
-      setErrorStatus(true);
+  try {
+    const response = await axios.get("http://localhost:5000/groups/search", {
+      params: { groupName: searchGroupName },
+    });
+    setErrorStatus(false);
+    setMessage("");
+    setGroup(response.data); // Ensure response.data is a valid group
+  } catch (error) {
+    if (error.response?.status === 404) {
+      setMessage("Group not found");
+    } else {
+      setMessage(error.response?.data?.error || "Error searching group");
     }
-  };
+    setErrorStatus(true);
+  }
+};
 
   // Rename group
   const handleRenameGroup = async () => {
@@ -102,6 +94,28 @@ const GroupManagement = () => {
       setErrorStatus(true);
     }
   };
+
+
+  // Remove student from group
+const handleRemoveStudent = async (studentId) => {
+  if (!group || !group._id) {
+    setMessage("Group not found or invalid group");
+    setErrorStatus(true);
+    return;
+  }
+
+  try {
+    const response = await axios.delete(
+      `http://localhost:5000/groups/${group._id}/students/${studentId}`
+    );
+    setGroup(response.data);
+    setMessage("");
+  } catch (error) {
+    setMessage(error.response?.data?.error || "Error removing student");
+    setErrorStatus(true);
+  }
+};
+
 
   // Delete entire group
   const handleDeleteGroup = async () => {
