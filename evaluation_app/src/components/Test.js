@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
 const TestPage = ({ timeLimit = 60 }) => {
   const { evaluationId } = useParams();
@@ -8,116 +8,86 @@ const TestPage = ({ timeLimit = 60 }) => {
   const [answers, setAnswers] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState(timeLimit * 60);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const navigate = useNavigate();
 
-  // Define submit function first without dependencies on enterFullscreen
   const handleSubmit = useCallback(async () => {
     try {
-      const usn = localStorage.getItem('username');
-      await fetch('http://localhost:5000/api/submit-answers', {
-        method: 'POST',
+      const usn = localStorage.getItem("username");
+      await fetch("http://localhost:5000/api/submit-answers", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           usn,
           evaluationId,
           answers: Object.entries(answers).map(([questionId, answer]) => ({
             questionId,
-            answer
-          }))
-        })
+            answer,
+          })),
+        }),
       });
-      
-      // Exit fullscreen before navigating
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        await document.webkitExitFullscreen();
+
+      if (document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch (err) {
+          console.error("Error exiting fullscreen:", err);
+        }
       }
-      
-      navigate('/student-dashboard');
+
+      navigate("/student-dashboard");
     } catch (err) {
-      console.error('Error submitting answers:', err);
+      console.error("Error submitting answers:", err);
+      navigate("/student-dashboard"); // Fallback navigation
     }
   }, [answers, evaluationId, navigate]);
 
-  // Now enterFullscreen can depend on handleSubmit
-  const enterFullscreen = useCallback(async () => {
+  const startTest = useCallback(async () => {
     try {
       const elem = document.documentElement;
-      if (elem.requestFullscreen) {
-        await elem.requestFullscreen();
-      } else if (elem.webkitRequestFullscreen) {
-        await elem.webkitRequestFullscreen();
-      } else if (elem.msRequestFullscreen) {
-        await elem.msRequestFullscreen();
-      }
-      setIsFullscreen(true);
+      await elem.requestFullscreen();
+      setHasStarted(true);
     } catch (err) {
-      console.error('Fullscreen error:', err);
-      handleSubmit(); // Force submit if fullscreen fails
+      console.error("Fullscreen error:", err);
+      // If fullscreen fails, don't allow test to start
+      alert(
+        "Fullscreen mode is required to take this test. Please enable fullscreen permissions and try again."
+      );
     }
-  }, [handleSubmit]);
+  }, []);
 
   // Monitor fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = document.fullscreenElement !== null;
-      setIsFullscreen(isCurrentlyFullscreen);
-      
-      if (!isCurrentlyFullscreen) {
-        handleSubmit(); // Auto-submit if fullscreen is exited
+      if (!document.fullscreenElement && hasStarted) {
+        handleSubmit(); // Only submit if test has actually started
       }
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [handleSubmit, hasStarted]);
 
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
-  }, [handleSubmit]);
-
-  // Monitor keyboard shortcuts and tab visibility
+  // Monitor tab visibility
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Allow only essential keys
-      const allowedKeys = [
-        'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-        'Tab', 'Enter', 'Shift', 'Control', 'Alt'
-      ];
-      
-      if (!allowedKeys.includes(e.key) && 
-          !(e.key.length === 1 && /[\w\s.,?!@#$%^&*()_+=\-;:'"[\]{}|\\/<>]/.test(e.key))) {
-        e.preventDefault();
-        return false;
-      }
-    };
-
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        handleSubmit(); // Auto-submit if tab/window loses focus
+      if (document.hidden && hasStarted) {
+        handleSubmit();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [handleSubmit, hasStarted]);
 
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [handleSubmit]);
-
-  // Timer effect
+  // Timer effect - only start when test has begun
   useEffect(() => {
+    if (!hasStarted) return;
+
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
@@ -130,39 +100,40 @@ const TestPage = ({ timeLimit = 60 }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [handleSubmit]);
+  }, [handleSubmit, hasStarted]);
 
-  // Fetch questions and enter fullscreen
+  // Fetch questions
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`http://localhost:5000/api/questions/${evaluationId}`);
+        const response = await fetch(
+          `http://localhost:5000/api/questions/${evaluationId}`
+        );
         const data = await response.json();
         setQuestions(data);
-        await enterFullscreen(); // Enter fullscreen after questions are loaded
       } catch (err) {
-        console.error('Error fetching questions:', err);
+        console.error("Error fetching questions:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchQuestions();
-  }, [evaluationId, enterFullscreen]); // Now includes enterFullscreen dependency
+  }, [evaluationId]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
-  const handleAnswerChange = (questionId, answer) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
-  };
+  const handleAnswerChange = useCallback((questionId, answer) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+  }, []);
 
-  const handleNextStep = () => setCurrentStep(prev => prev + 1);
-  const handlePreviousStep = () => setCurrentStep(prev => prev - 1);
+  const handleNextStep = () => setCurrentStep((prev) => prev + 1);
+  const handlePreviousStep = () => setCurrentStep((prev) => prev - 1);
 
   if (isLoading) {
     return (
@@ -180,25 +151,37 @@ const TestPage = ({ timeLimit = 60 }) => {
     );
   }
 
+  if (!hasStarted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+          <h1 className="text-2xl font-bold mb-4 text-center">
+            Ready to Start Test?
+          </h1>
+          <p className="mb-6 text-gray-600">
+            This test requires fullscreen mode. Make sure you:
+          </p>
+          <ul className="list-disc pl-5 mb-6 text-gray-600 space-y-2">
+            <li>Have a stable internet connection</li>
+            <li>Won't be disturbed during the test</li>
+            <li>Have {timeLimit} minutes available</li>
+            <li>Have enabled fullscreen permissions</li>
+          </ul>
+          <button
+            onClick={startTest}
+            className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Start Test in Fullscreen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const currentQuestion = questions[currentStep - 1];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isFullscreen && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-md text-center">
-            <h2 className="text-xl font-bold mb-4">Fullscreen Required</h2>
-            <p className="mb-4">This test must be taken in fullscreen mode. Click the button below to continue.</p>
-            <button
-              onClick={enterFullscreen}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Enter Fullscreen
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="fixed top-0 left-0 right-0 bg-white shadow-md z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
@@ -215,10 +198,12 @@ const TestPage = ({ timeLimit = 60 }) => {
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Question {currentStep}</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Question {currentStep}
+            </h2>
             <p className="text-gray-700 mb-6">{currentQuestion.question}</p>
-            
-            {currentQuestion.questionType === 'MCQ' ? (
+
+            {currentQuestion.questionType === "MCQ" ? (
               <div className="space-y-4">
                 {currentQuestion.options?.map((option, optionIndex) => (
                   <div key={optionIndex} className="flex items-center">
@@ -228,10 +213,15 @@ const TestPage = ({ timeLimit = 60 }) => {
                       name={`question-${currentQuestion._id}`}
                       value={option}
                       checked={answers[currentQuestion._id] === option}
-                      onChange={(e) => handleAnswerChange(currentQuestion._id, e.target.value)}
+                      onChange={(e) =>
+                        handleAnswerChange(currentQuestion._id, e.target.value)
+                      }
                       className="h-4 w-4 text-blue-600"
                     />
-                    <label htmlFor={`option-${optionIndex}`} className="ml-3 text-gray-700">
+                    <label
+                      htmlFor={`option-${optionIndex}`}
+                      className="ml-3 text-gray-700"
+                    >
                       {option}
                     </label>
                   </div>
@@ -241,8 +231,10 @@ const TestPage = ({ timeLimit = 60 }) => {
               <textarea
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows="6"
-                value={answers[currentQuestion._id] || ''}
-                onChange={(e) => handleAnswerChange(currentQuestion._id, e.target.value)}
+                value={answers[currentQuestion._id] || ""}
+                onChange={(e) =>
+                  handleAnswerChange(currentQuestion._id, e.target.value)
+                }
                 placeholder="Enter your answer here..."
               />
             )}
@@ -260,9 +252,9 @@ const TestPage = ({ timeLimit = 60 }) => {
             >
               Previous
             </button>
-            
+
             {currentStep === questions.length ? (
-              <button 
+              <button
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                 onClick={handleSubmit}
               >

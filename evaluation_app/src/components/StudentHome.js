@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import Welcome from './Welcome';
-import Navbar from './Navbar';
-import '../css/StudentHome.css'; // Import CSS file
-
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import Welcome from "./Welcome";
+import Navbar from "./Navbar";
+import "../css/StudentHome.css"; // Import CSS file
+import { Link } from 'react-router-dom';
 const StudentHome = () => {
   const [evaluations, setEvaluations] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -12,18 +12,22 @@ const StudentHome = () => {
   const [studentName, setStudentName] = useState(null);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const navigate = useNavigate();
-  const token = localStorage.getItem('jwtToken');
+  const token = localStorage.getItem("jwtToken");
 
   // Fetch data on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/evaluations/home', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          "http://localhost:5000/api/evaluations/home",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
+        console.log(response.data.evaluations);
 
         setStudent(response.data.student);
         setStudentName(response.data.student.Name);
@@ -31,7 +35,7 @@ const StudentHome = () => {
         setEvaluations(response.data.evaluations || []);
         setLoginSuccess(true);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
         setLoginSuccess(false);
       }
     };
@@ -52,12 +56,20 @@ const StudentHome = () => {
 
   // Render logic if not logged in
   if (!loginSuccess) {
-    return <div className="message-container">Please log in to access your evaluations.</div>;
+    return (
+      <div className="message-container">
+        Please log in to access your evaluations.
+        <br />
+        <Link to="/login">Go to Login Page</Link>
+      </div>
+    );
   }
 
   // Render logic if student info is not found
   if (!student) {
-    return <div className="message-container">Student information not found.</div>;
+    return (
+      <div className="message-container">Student information not found.</div>
+    );
   }
 
   return (
@@ -92,9 +104,13 @@ const StudentHome = () => {
               <div key={evaluation._id} className="card">
                 <h5 className="card-title">{evaluation.title}</h5>
                 <p className="card-text">Topic: {evaluation.topic}</p>
-                <p className="card-text">Scheduled For: {evaluation.scheduleType}</p>
-                <p className="card-text">Time Limit: {evaluation.timeLimit} minutes</p>
-                {evaluation.status === 'active' && (
+                <p className="card-text">
+                  Scheduled For: {evaluation.scheduleType}
+                </p>
+                <p className="card-text">
+                  Time Limit: {evaluation.timeLimit} minutes
+                </p>
+                {evaluation.status === "active" && (
                   <button
                     onClick={() => handleTestClick(evaluation._id)}
                     className="btn primary"
@@ -102,12 +118,12 @@ const StudentHome = () => {
                     Take Test
                   </button>
                 )}
-                {evaluation.status === 'completed' && (
+                {evaluation.status === "completed" && (
                   <button className="btn secondary" disabled>
                     Evaluation Pending
                   </button>
                 )}
-                {evaluation.status === 'evaluated' && (
+                {evaluation.status === "evaluated" && (
                   <button
                     onClick={() => handleResultsClick(evaluation._id)}
                     className="btn success"

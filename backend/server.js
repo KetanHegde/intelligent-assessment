@@ -60,6 +60,27 @@ const baseQuestionFields = {
 };
 
 
+const evaluationResultSchema = new mongoose.Schema({
+  evaluation: {
+    evaluationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Evaluation',
+      required: true,
+    },
+    studentUSN: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    marks: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+  },
+}, { timestamps: true });
+
+const EvaluationResult = mongoose.model('EvaluationResult', evaluationResultSchema);
 
 
 
@@ -132,7 +153,6 @@ const locationSchema = new mongoose.Schema({
   name: String,
 });
 const Location = mongoose.model("Titles", locationSchema);
-
 const evaluationSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -187,6 +207,10 @@ const evaluationSchema = new mongoose.Schema({
     min: 0,
     required: true,
   },
+  finishDateTime: {
+    type: Date,
+    required: true,  // Ensures that a finish date is always provided
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -199,6 +223,7 @@ const evaluationSchema = new mongoose.Schema({
 });
 
 const Evaluation = mongoose.model("Evaluation", evaluationSchema);
+
 app.get('/api/evaluations/home', authenticate, async (req, res) => {
   try {
     console.log("Authenticated User:", req.user.username);
@@ -224,11 +249,28 @@ app.get('/api/evaluations/home', authenticate, async (req, res) => {
     // Find evaluations for all the groups
     const evaluations = await Evaluation.find({ group: { $in: groupNames } });
 
+    // Fetch submitted answers for the student
+    const submittedAnswers = await SubmittedAnswer.find({ usn: student.USN });
+
+
+    console.log(submittedAnswers);
+    // Update evaluation status based on submitted answers
+    const evaluationsWithStatus = evaluations.map((evaluation) => {
+      const hasSubmittedAnswers = submittedAnswers.some(
+        (answer) => answer.evaluationId.toString() === evaluation._id.toString()
+      );
+
+      return {
+        ...evaluation.toObject(),
+        status: hasSubmittedAnswers ? "completed" : evaluation.status,
+      };
+    });
+
     // Return all data, even if some arrays are empty
     res.json({ 
       student,
       groups,
-      evaluations,
+      evaluations: evaluationsWithStatus,
       message: !groups.length ? 'No groups found' : 
                !evaluations.length ? 'No evaluations found' : null
     });
@@ -238,6 +280,8 @@ app.get('/api/evaluations/home', authenticate, async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
+
 
 app.get('/api/questions/:evaluationId', async (req, res) => {
   try {
@@ -876,7 +920,6 @@ app.post("/api/students/upload", upload.single("file"), async (req, res) => {
       .json({ message: "An error occurred while uploading students" });
   }
 });
-
 // Add create evaluation route
 app.post("/api/create-evaluation", async (req, res) => {
   try {
@@ -888,6 +931,7 @@ app.post("/api/create-evaluation", async (req, res) => {
       questionTypes,
       questionDistribution,
       timeLimit,
+      finishDateTime, // Add the finishDateTime field
     } = req.body;
 
     // Validate input
@@ -945,6 +989,14 @@ app.post("/api/create-evaluation", async (req, res) => {
       });
     }
 
+    // Validate finishDateTime
+    if (!finishDateTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Finish date and time is required",
+      });
+    }
+
     // Create new evaluation
     const newEvaluation = new Evaluation({
       title,
@@ -954,6 +1006,7 @@ app.post("/api/create-evaluation", async (req, res) => {
       questionTypes,
       questionDistribution,
       timeLimit,
+      finishDateTime, // Save finishDateTime
       status: scheduleType === "now" ? "active" : "draft",
     });
 
@@ -1164,6 +1217,7 @@ app.post('/api/submit-answers', async (req, res) => {
   }
 });
 
+
 app.put("/api/evaluations/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -1177,17 +1231,16 @@ app.put("/api/evaluations/:id/status", async (req, res) => {
   }
 
   // Validate Status
-  const validStatuses = ["draft", "active", "completed"];
+  const validStatuses = ["draft", "active", "completed", "evaluated"];
   if (!status || !validStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
-      message: "Invalid status value. Allowed values are 'draft', 'active', 'completed'.",
+      message: "Invalid status value. Allowed values are 'draft', 'active', 'completed', 'evaluated'.",
     });
   }
 
   try {
     // Fetch the evaluation by ID
-    console.log(`[INFO] Fetching evaluation with ID: ${id}`);
     const evaluation = await Evaluation.findById(id);
 
     if (!evaluation) {
@@ -1197,57 +1250,62 @@ app.put("/api/evaluations/:id/status", async (req, res) => {
       });
     }
 
-    // Handle transition from 'draft' to 'active'
-    if (evaluation.status === "draft" && status === "active") {
-      console.log("[INFO] Transitioning from 'draft' to 'active'...");
-      // Find the associated title
-      const title = await Title.findOne({ name: evaluation.topic });
-      if (!title) {
+    // Handle transition from 'completed' to 'evaluated'
+    if (evaluation.status === "completed" && status === "evaluated") {
+      console.log("[INFO] Transitioning from 'completed' to 'evaluated'...");
+
+      // Fetch all submissions for the evaluation
+      const submissions = await SubmittedAnswer.find({ evaluationId: id });
+      if (!submissions || submissions.length === 0) {
         return res.status(404).json({
           success: false,
-          message: "Associated title not found.",
+          message: "No submissions found for this evaluation.",
         });
       }
 
-      // Generate Questions
-      let generatedQuestions;
-      try {
-        console.log("[INFO] Generating questions...");
-        if (evaluation.questionType === "MCQ") {
-          generatedQuestions = await generateMCQQuestions(title.description, evaluation.topic);
-        } else {
-          generatedQuestions = await generateDescriptiveQuestions(title.description, evaluation.topic);
-        }
+      // Evaluate submissions using Gemini API
+      const evaluationResults = [];
+      for (const submission of submissions) {
+        const studentUSN = submission.usn;
+        const answers = submission.answers;
 
-        if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
-          throw new Error("No questions generated or generation failed.");
+        try {
+          console.log(`[INFO] Evaluating submission for student USN: ${studentUSN}`);
+          const responses = await Promise.all(
+            answers.map(async (answer) => {
+              const question = await Question.findById(answer.questionId);
+              if (!question) {
+                throw new Error("Question not found.");
+              }
+
+              const geminiResponse = await genAI.evaluateAnswer({
+                question: question.question,
+                correctAnswer: question.correctAnswer || question.keyPoints.join(", "),
+                studentAnswer: answer.answer,
+              });
+
+              return {
+                questionId: answer.questionId,
+                marks: geminiResponse.marks || 0, // Assuming the API returns marks
+              };
+            })
+          );
+
+          const totalMarks = responses.reduce((sum, r) => sum + r.marks, 0);
+          evaluationResults.push({ evaluationId: id, studentUSN, marks: totalMarks });
+
+        } catch (err) {
+          console.error(`[ERROR] Evaluation failed for USN: ${studentUSN}`, err.message);
         }
-      } catch (err) {
-        console.error("[ERROR] Question generation failed:", err.message);
-        return res.status(500).json({
-          success: false,
-          message: "Question generation failed.",
-          error: { message: err.message },
-        });
       }
 
-      // Save Generated Questions
-      console.log("[INFO] Saving generated questions...");
-      const questionPromises = generatedQuestions.map((q) => {
-        const question = new Question({
-          evaluationId: evaluation._id,
-          ...q,
-        });
-        return question.save().catch((err) => {
-          console.error("[ERROR] Failed to save question:", err.message);
-        });
-      });
-
-      await Promise.all(questionPromises);
+      // Save evaluation results
+      for (const result of evaluationResults) {
+        await new EvaluationResult(result).save();
+      }
     }
 
     // Update the evaluation status
-    console.log("[INFO] Updating evaluation status...");
     const updatedEvaluation = await Evaluation.findByIdAndUpdate(
       id,
       { status },
@@ -1275,6 +1333,7 @@ app.put("/api/evaluations/:id/status", async (req, res) => {
     });
   }
 });
+
 
 // Start the server
 app.listen(PORT, () => {

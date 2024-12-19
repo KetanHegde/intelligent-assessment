@@ -15,16 +15,21 @@ const EvaluationCreationForm = () => {
       difficult: 0,
     },
     timeLimit: 0,
+    finishDateTime: "", // New field for test finishing date and time
   });
   const [topics, setTopics] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchTopicsAndGroups = async () => {
       try {
-        const topicsResponse = await axios.get("http://localhost:5000/api/titles");
-        const groupsResponse = await axios.get("http://localhost:5000/api/groups");
+        const topicsResponse = await axios.get(
+          "http://localhost:5000/api/titles"
+        );
+        const groupsResponse = await axios.get(
+          "http://localhost:5000/api/groups"
+        );
 
         setTopics(topicsResponse.data);
         setGroups(groupsResponse.data);
@@ -50,9 +55,12 @@ const EvaluationCreationForm = () => {
   };
 
   const handleSubmit = async () => {
-    setLoading(true); // Set loading to true
+    setLoading(true);
     try {
-      const response = await axios.post("http://localhost:5000/api/create-evaluation", formData);
+      const response = await axios.post(
+        "http://localhost:5000/api/create-evaluation",
+        formData
+      );
       alert("Evaluation created successfully!");
       console.log(response);
       setFormData({
@@ -67,14 +75,14 @@ const EvaluationCreationForm = () => {
           difficult: 0,
         },
         timeLimit: 0,
+        finishDateTime: "", // Reset finish date and time
       });
       setStep(1);
-      // Reset form or redirect
     } catch (error) {
       console.error("Error creating evaluation:", error);
       alert("Failed to create evaluation");
     } finally {
-      setLoading(false); // Set loading to false after submission is complete
+      setLoading(false);
     }
   };
 
@@ -370,18 +378,49 @@ const EvaluationCreationForm = () => {
                 Previous
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={handleNextStep}
                 disabled={formData.timeLimit === 0}
+                className="bg-blue-500 text-white p-2 rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+
+      case 8:
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl mb-4">Set Test Finishing Date & Time</h2>
+            <input
+              type="datetime-local"
+              value={formData.finishDateTime}
+              onChange={(e) =>
+                setFormData({ ...formData, finishDateTime: e.target.value })
+              }
+              className="w-full p-2 border rounded"
+            />
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={handlePreviousStep}
+                className="bg-gray-300 text-black p-2 rounded"
+              >
+                Previous
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!formData.finishDateTime}
                 className="bg-green-500 text-white p-2 rounded disabled:opacity-50"
               >
                 Create Evaluation
               </button>
             </div>
-
-            {/* Show loading spinner and text when submitting */}
             {loading && (
               <div className="mt-4 text-center">
-                <div className="spinner-border animate-spin inline-block w-6 h-6 border-4 border-current border-t-transparent rounded-full" role="status"></div>
+                <div
+                  className="spinner-border animate-spin inline-block w-6 h-6 border-4 border-current border-t-transparent rounded-full"
+                  role="status"
+                ></div>
                 <span className="ml-2">Creating...</span>
               </div>
             )}
@@ -397,7 +436,7 @@ const EvaluationCreationForm = () => {
     <div className="max-w-md mx-auto mt-10 bg-white shadow-md rounded-lg">
       <div className="p-4 bg-blue-100 text-center">
         <h1 className="text-3xl font-bold">Create Evaluation</h1>
-        <div className="mt-2">Step {step} of 7</div>
+        <div className="mt-2">Step {step} of 8</div>
       </div>
       {renderStep()}
     </div>
