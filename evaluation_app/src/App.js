@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import TeacherHome from "./components/TeacherHome";
 import TitleAndText from "./components/TitleAndText";
 import ScheduleTest from "./components/ScheduleTest";
@@ -32,12 +37,16 @@ function App() {
         <Route path="/add-manage-students" element={<StudentManage />}></Route>
         <Route path="/create-exam" element={<ExamManager />}></Route>
         <Route path="/login" element={<LoginForm />}></Route>
+        <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/register" element={<RegisterForm />}></Route>
         <Route path="/student-dashboard" element={<StudentHome />}></Route>
         <Route path="/logout" element={<Logout />}></Route>
         <Route path="/test/:evaluationId" element={<Test />} />
-        <Route path="/results/:evaluationId/:usn" element={<ResultsStudentPage />} />
-        <Route path="/results/:evaluationId" element={<ResultsTeacherPage/>}/>
+        <Route
+          path="/results/:evaluationId/:usn"
+          element={<ResultsStudentPage />}
+        />
+        <Route path="/results/:evaluationId" element={<ResultsTeacherPage />} />
       </Routes>
     </Router>
   );
