@@ -9,11 +9,15 @@ const TestPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
-  const [timeLimit, setTimeLimit] = useState(0);  // Add a state for timeLimit
+  const [timeLimit, setTimeLimit] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
+    
     try {
+      setIsSubmitting(true);
       const usn = localStorage.getItem("username");
       await fetch("http://localhost:5000/api/submit-answers", {
         method: "POST",
@@ -41,9 +45,10 @@ const TestPage = () => {
       navigate("/student-dashboard");
     } catch (err) {
       console.error("Error submitting answers:", err);
+      setIsSubmitting(false);
       navigate("/student-dashboard"); // Fallback navigation
     }
-  }, [answers, evaluationId, navigate]);
+  }, [answers, evaluationId, navigate, isSubmitting]);
 
   const startTest = useCallback(async () => {
     try {
@@ -52,7 +57,6 @@ const TestPage = () => {
       setHasStarted(true);
     } catch (err) {
       console.error("Fullscreen error:", err);
-      // If fullscreen fails, don't allow test to start
       alert(
         "Fullscreen mode is required to take this test. Please enable fullscreen permissions and try again."
       );
@@ -62,20 +66,20 @@ const TestPage = () => {
   // Monitor fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && hasStarted) {
-        handleSubmit(); // Only submit if test has actually started
+      if (!document.fullscreenElement && hasStarted && !isSubmitting) {
+        handleSubmit();
       }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [handleSubmit, hasStarted]);
+  }, [handleSubmit, hasStarted, isSubmitting]);
 
   // Monitor tab visibility
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && hasStarted) {
+      if (document.hidden && hasStarted && !isSubmitting) {
         handleSubmit();
       }
     };
@@ -83,7 +87,7 @@ const TestPage = () => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [handleSubmit, hasStarted]);
+  }, [handleSubmit, hasStarted, isSubmitting]);
 
   // Timer effect - only start when test has begun
   useEffect(() => {
@@ -91,7 +95,7 @@ const TestPage = () => {
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
-        if (prev <= 1) {
+        if (prev <= 1 && !isSubmitting) {
           clearInterval(timer);
           handleSubmit();
           return 0;
@@ -101,7 +105,7 @@ const TestPage = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [handleSubmit, hasStarted]);
+  }, [handleSubmit, hasStarted, isSubmitting]);
 
   // Fetch questions and timeLimit
   useEffect(() => {
@@ -114,8 +118,8 @@ const TestPage = () => {
         const data = await response.json();
         console.log(data);
         setQuestions(data.questions);
-        setTimeLimit(data.timeLimit); // Set the timeLimit from the evaluation data
-        setTimeRemaining(data.timeLimit * 60); // Convert timeLimit to seconds
+        setTimeLimit(data.timeLimit);
+        setTimeRemaining(data.timeLimit * 60);
       } catch (err) {
         console.error("Error fetching evaluation details:", err);
       } finally {
@@ -259,10 +263,11 @@ const TestPage = () => {
 
             {currentStep === questions.length ? (
               <button
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                 onClick={handleSubmit}
+                disabled={isSubmitting}
               >
-                Submit Test
+                {isSubmitting ? "Submitting..." : "Submit Test"}
               </button>
             ) : (
               <button

@@ -5,6 +5,7 @@ const ResultsStudentPage = () => {
   const { evaluationId, usn } = useParams();
   const [studentResult, setStudentResult] = useState(null);
   const [rankings, setRankings] = useState([]);
+  const [totalMarks, setTotalMarks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,13 +26,40 @@ const ResultsStudentPage = () => {
         const response = await fetch(`http://localhost:5000/api/results/ranking/${evaluationId}`);
         if (!response.ok) throw new Error("Failed to fetch rankings");
         const data = await response.json();
-        setRankings(data);
+        
+        // Remove duplicate student results by USN
+        const uniqueRankings = data.reduce((acc, current) => {
+          const isDuplicate = acc.find(item => 
+            item.evaluation.studentUSN === current.evaluation.studentUSN
+          );
+          if (!isDuplicate) {
+            acc.push(current);
+          }
+          return acc;
+        }, []);
+
+        // Sort by marks in descending order
+        uniqueRankings.sort((a, b) => b.evaluation.marks - a.evaluation.marks);
+        
+        setRankings(uniqueRankings);
       } catch (err) {
         setError(err.message);
       }
     };
 
-    Promise.all([fetchStudentResult(), fetchRankings()])
+    const fetchTotalQuestions = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/evaluationsStudent/${evaluationId}`);
+        if (!response.ok) throw new Error("Failed to fetch evaluation details");
+        const data = await response.json();
+        // Calculate total marks based on the length of populated questions array
+        setTotalMarks(data.questions.length * 5); // Each question is 5 marks
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    Promise.all([fetchStudentResult(), fetchRankings(), fetchTotalQuestions()])
       .finally(() => setLoading(false));
   }, [evaluationId, usn]);
 
@@ -80,7 +108,12 @@ const ResultsStudentPage = () => {
                       <div className="col-md-6">
                         <div className="mb-3">
                           <label className="text-muted small">Marks Obtained</label>
-                          <p className="h5">{studentResult.evaluation.marks}</p>
+                          <p className="h5">
+                            {studentResult.evaluation.marks} / {totalMarks}
+                            <span className="text-muted small ms-2">
+                              ({((studentResult.evaluation.marks / totalMarks) * 100).toFixed(1)}%)
+                            </span>
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -102,17 +135,21 @@ const ResultsStudentPage = () => {
                           <th>Rank</th>
                           <th>USN</th>
                           <th>Marks</th>
+                          <th>Percentage</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rankings.map((result, index) => (
-                          <tr key={index} className={result.evaluation.studentUSN === usn ? "table-primary" : ""}>
+                          <tr key={result.evaluation.studentUSN} className={result.evaluation.studentUSN === usn ? "table-primary" : ""}>
                             <td>
                               <span className="badge bg-secondary">{index + 1}</span>
                             </td>
                             <td>{result.evaluation.studentUSN}</td>
                             <td>
-                              <span className="fw-bold">{result.evaluation.marks}</span>
+                              <span className="fw-bold">{result.evaluation.marks} / {totalMarks}</span>
+                            </td>
+                            <td>
+                              {((result.evaluation.marks / totalMarks) * 100).toFixed(1)}%
                             </td>
                           </tr>
                         ))}

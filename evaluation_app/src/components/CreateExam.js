@@ -13,6 +13,7 @@ const EvaluationCreationForm = () => {
       easy: 0,
       medium: 0,
       difficult: 0,
+      hard: 0,
     },
     timeLimit: 0,
     finishDateTime: "", // New field for test finishing date and time
@@ -73,6 +74,7 @@ const EvaluationCreationForm = () => {
           easy: 0,
           medium: 0,
           difficult: 0,
+          hard:0,
         },
         timeLimit: 0,
         finishDateTime: "", // Reset finish date and time
@@ -221,7 +223,7 @@ const EvaluationCreationForm = () => {
           <div className="p-6">
             <h2 className="text-2xl mb-4">Select Question Types</h2>
             <div className="space-y-2">
-              <label className="flex items-center">
+              {/* <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={formData.questionTypes.includes("mcq")}
@@ -234,7 +236,7 @@ const EvaluationCreationForm = () => {
                   className="mr-2"
                 />
                 Multiple Choice Questions (MCQ)
-              </label>
+              </label> */}
               <label className="flex items-center">
                 <input
                   type="checkbox"
@@ -273,10 +275,10 @@ const EvaluationCreationForm = () => {
       case 6:
         return (
           <div className="p-6">
-            <h2 className="text-2xl mb-4">Question Difficulty Distribution</h2>
+            <h2 className="text-2xl mb-4">Bloom's Taxanomy Distribution</h2>
             <div className="space-y-4">
               <div>
-                <label>Easy Questions</label>
+                <label>L1</label>
                 <input
                   type="number"
                   value={formData.questionDistribution.easy}
@@ -294,7 +296,7 @@ const EvaluationCreationForm = () => {
                 />
               </div>
               <div>
-                <label>Medium Questions</label>
+                <label>L2</label>
                 <input
                   type="number"
                   value={formData.questionDistribution.medium}
@@ -312,7 +314,7 @@ const EvaluationCreationForm = () => {
                 />
               </div>
               <div>
-                <label>Difficult Questions</label>
+                <label>L3</label>
                 <input
                   type="number"
                   value={formData.questionDistribution.difficult}
@@ -329,7 +331,26 @@ const EvaluationCreationForm = () => {
                   min="0"
                 />
               </div>
+              <div>
+                <label>L4</label>
+                <input
+                  type="number"
+                  value={formData.questionDistribution.hard}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      questionDistribution: {
+                        ...formData.questionDistribution,
+                        hard: parseInt(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  className="w-full p-2 border rounded"
+                  min="0"
+                />
+              </div>
             </div>
+            
             <div className="flex justify-between mt-4">
               <button
                 onClick={handlePreviousStep}

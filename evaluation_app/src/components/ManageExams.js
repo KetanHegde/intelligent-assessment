@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";  // Import useNavigate
+import { useNavigate } from "react-router-dom";
 
 const EvaluationsList = () => {
   const [evaluations1, setEvaluations1] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null); // New state for tracking which evaluation is being processed
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
-  const navigate = useNavigate();  // Initialize useNavigate
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEvaluations = async () => {
@@ -19,7 +20,7 @@ const EvaluationsList = () => {
         console.log("API Response:", response.data);
 
         if (response.data.success) {
-          setEvaluations1(response.data.data); // Access evaluations from response.data.data
+          setEvaluations1(response.data.data);
           setError(null);
         } else {
           setError("Failed to load Assessments");
@@ -35,15 +36,14 @@ const EvaluationsList = () => {
     fetchEvaluations();
   }, []);
 
-  // Function to handle status update
   const updateStatus = async (evaluationId, newStatus) => {
     try {
+      setProcessingId(evaluationId); // Set processing state
       const response = await axios.put(
         `http://localhost:5000/api/evaluations/${evaluationId}/status`,
         { status: newStatus }
       );
       if (response.data.success) {
-        // Update the local state with the new evaluation data
         const updatedEvaluations = evaluations1.map((evaluation) =>
           evaluation._id === evaluationId
             ? { ...evaluation, status: newStatus }
@@ -55,22 +55,24 @@ const EvaluationsList = () => {
     } catch (err) {
       console.error("Error updating Assessment status:", err);
       setError("Failed to update Assessment status");
+    } finally {
+      setProcessingId(null); // Clear processing state
     }
   };
 
   const handleButtonClick = (status, evaluationId) => {
     switch (status) {
       case "draft":
-        updateStatus(evaluationId, "active"); // Change status to 'active'
+        updateStatus(evaluationId, "active");
         break;
       case "active":
         setMessage("Please wait until the time is completed.");
         break;
       case "completed":
-        updateStatus(evaluationId, "evaluated"); // Change status to 'evaluated'
+        updateStatus(evaluationId, "evaluated");
         break;
       case "evaluated":
-        navigate(`/results/${evaluationId}`);  
+        navigate(`/results/${evaluationId}`);
         break;
       default:
         setMessage("");
@@ -100,7 +102,7 @@ const EvaluationsList = () => {
           {evaluations1.map((evaluation1) => (
             <div
               key={evaluation1._id}
-              className="w-full mb-4" // Ensure it takes full width
+              className="w-full mb-4"
             >
               <div className="card h-100">
                 <div className="card-body">
@@ -137,19 +139,28 @@ const EvaluationsList = () => {
                             evaluation1.status.slice(1)}
                         </span>
                       </p>
-                      <button
-                        className="btn btn-primary mt-2"
-                        onClick={() =>
-                          handleButtonClick(evaluation1.status, evaluation1._id)
-                        }
-                      >
-                        {evaluation1.status === "draft" && "Schedule Now"}
-                        {evaluation1.status === "active" &&
-                          "Wait until time is completed"}
-                        {evaluation1.status === "completed" &&
-                          "Create Evaluations"}
-                        {evaluation1.status === "evaluated" && "See Results"}
-                      </button>
+                      {processingId === evaluation1._id ? (
+                        <div className="d-flex align-items-center mt-2">
+                          <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                          </div>
+                          <span>Processing...</span>
+                        </div>
+                      ) : (
+                        <button
+                          className="btn btn-primary mt-2"
+                          onClick={() =>
+                            handleButtonClick(evaluation1.status, evaluation1._id)
+                          }
+                        >
+                          {evaluation1.status === "draft" && "Schedule Now"}
+                          {evaluation1.status === "active" &&
+                            "Wait until time is completed"}
+                          {evaluation1.status === "completed" &&
+                            "Make Evaluation"}
+                          {evaluation1.status === "evaluated" && "See Results"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

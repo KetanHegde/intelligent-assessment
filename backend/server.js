@@ -401,6 +401,24 @@ app.get("/api/evaluations/:id", authenticate, async (req, res) => {
   }
 });
 
+
+app.get("/api/evaluationsStudent/:id", async (req, res) => {
+  try {
+    // Find all questions related to the evaluation ID
+    const questions = await Question.find({ evaluationId: req.params.id });
+
+    if (!questions || questions.length === 0) {
+      return res.status(404).send("No questions found for this evaluation");
+    }
+
+    res.json({questions, totalQuestions:questions.length});
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
+});
+
+
 // Get results for a specific evaluation
 app.get("/api/evaluations/results/:id", authenticate, async (req, res) => {
   try {
@@ -1514,13 +1532,21 @@ const evaluateSubmittedAnswers = async (evaluationId) => {
           marksAwarded = question.correctAnswer === answer.answer ? 1 : 0;
         } else if (question.questionType === "descriptive") {
           const prompt = `
-            Evaluate the following descriptive answer very very very strictly, dont give marks for random words, check sentence formation, how they are related to the context of the question:
+            Evaluate the following descriptive answer 
+            with conditions as follow
+            1.evaluate very very very strictly, 
+            2. dont give marks for random words, 
+            3. check sentence formation, how they are related to the context of the question, 
+            4. if user has typed or pasted the question award 0 marks, 
+            5. if the user has written answer out of context award 0 for that answer:
+
+            Here is the input for you to evaluate
             Question: ${question.question}
             Sample Answer: ${question.sampleAnswer}
             Key Points: ${question.keyPoints.join(", ")}
             Student Answer: ${answer.answer}
             Provide:
-            1. Marks awarded (out of 10)
+            1. Marks awarded (out of 5)
             2. Feedback explaining key points missed or errors in the answer.
             Format the response as JSON:
             {
